@@ -1,8 +1,37 @@
-# SwasthaTrack - Pharmaceutical Supply Chain Management
+# SwasthaTrack - Healthcare Management Platform
 
 ## Project Overview
 
-**SwasthaTrack** is a comprehensive pharmaceutical supply chain management platform built for the Ayushman Bharat Digital Mission (ABDM). It provides real-time tracking, inventory management, and quality assurance for medicines across India's healthcare ecosystem.
+**SwasthaTrack** is a comprehensive healthcare management platform with five specialized dashboards for different user roles, built for the Ayushman Bharat Digital Mission (ABDM). It provides real-time healthcare operations management, patient care coordination, and quality assurance across India's healthcare ecosystem.
+
+## 🏥 Dashboard System
+
+SwasthaTrack now includes five role-based dashboards designed to streamline healthcare operations:
+
+### 📊 Medicine Dashboard
+- **For**: Pharmacists and pharmacy staff
+- **Features**: Real-time stock tracking, automated alerts, warehouse integration, transaction management
+- **Access**: `/dashboards/medicine`
+
+### 👨‍⚕️ Doctor Dashboard  
+- **For**: Healthcare providers and doctors
+- **Features**: Patient management, diagnosis system, prescription management, lab report access
+- **Access**: `/dashboards/doctor`
+
+### 👤 Patient Dashboard
+- **For**: Patients
+- **Features**: Health overview, prescription access, appointment management, lab results, report downloads
+- **Access**: `/dashboards/patient`
+
+### 🏢 Registration Desk Dashboard
+- **For**: Front desk and registration staff
+- **Features**: Patient registration, queue management, appointment scheduling, patient search
+- **Access**: `/dashboards/registration-desk`
+
+### 🧪 Laboratory Dashboard
+- **For**: Lab technicians and staff
+- **Features**: Test management, report processing, file uploads, result analysis, priority management
+- **Access**: `/dashboards/laboratory`
 
 ## 🏗 Project Structure
 
@@ -27,77 +56,101 @@ SwasthaTrack/
 └── README.md              # This file
 ```
 
-## 🚀 Quick Start
+## SwasthaTrack - Healthcare Management Platform
+
+SwasthaTrack is a comprehensive healthcare management platform designed to streamline operations for hospitals and clinics. It features role-based dashboards for Doctors, Patients, Pharmacists, Lab Technicians, and Registration Desk staff, integrated with the Ayushman Bharat Digital Mission (ABDM).
+
+## 🚀 Features
+
+- **Role-Based Access Control**: Secure dashboards for different user roles.
+- **Patient Management**: Registration, medical history, and appointment scheduling.
+- **Medicine Inventory**: Track stock, expiry dates, and manage prescriptions.
+- **Lab Management**: Order tests, upload results, and track status.
+- **Queue Management**: Real-time OPD queue tracking.
+- **ABDM Integration**: ABHA ID creation and linking (Mock implementation).
+
+## 🛠️ Tech Stack
+
+### Backend
+- **Framework**: FastAPI (Python)
+- **Database**: SQLite (Dev) / PostgreSQL (Prod)
+- **ORM**: SQLAlchemy
+- **Authentication**: JWT with OAuth2
+- **Testing**: Pytest
+
+### Frontend
+- **Framework**: React 18 + TypeScript
+- **Build Tool**: Vite
+- **Styling**: Tailwind CSS + shadcn/ui
+- **State Management**: React Query + Context API
+
+## 🏁 Getting Started
 
 ### Prerequisites
+- Python 3.9+
+- Node.js 18+
+- Git
 
-- **Node.js 18+** and npm
-- **Python 3.8+** and pip
-- **Git**
-
-### Backend Setup
+### 1. Backend Setup
 
 ```bash
-# Navigate to backend directory
 cd backend
 
-# Install Python dependencies
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# Windows:
+venv\Scripts\activate
+# Linux/Mac:
+source venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
 
-# Start the FastAPI server
+# Environment Setup
+cp .env.example .env
+# Edit .env with your configuration (defaults work for dev)
+
+# Run Server
 uvicorn main:app --reload
 ```
+Backend will run at `http://localhost:8000`. API Docs at `http://localhost:8000/docs`.
 
-The backend will be available at `http://localhost:8000`
-
-### Frontend Setup
+### 2. Frontend Setup
 
 ```bash
-# Navigate to frontend directory
 cd frontend
 
 # Install dependencies
 npm install
 
-# Start development server
+# Environment Setup
+cp .env.example .env
+# Edit .env if needed
+
+# Run Development Server
 npm run dev
 ```
+Frontend will run at `http://localhost:8081`.
 
-The frontend will be available at `http://localhost:8081`
+## 🧪 Testing
 
+### Backend Tests
+```bash
+cd backend
+pytest
+```
 
-## 🛠 Tech Stack
+## 🔒 Security Features
+- Password hashing with Bcrypt
+- JWT Authentication
+- Role-based authorization
+- CORS configuration
+- Input validation with Pydantic v2
 
-### Backend
-- **Framework**: FastAPI
-- **Database**: SQLAlchemy (with PostgreSQL support)
-- **Authentication**: JWT tokens
-- **API Documentation**: Automatic OpenAPI/Swagger docs
-
-### Frontend
-- **Framework**: React 18 + TypeScript
-- **Build Tool**: Vite 7
-- **Styling**: Tailwind CSS 3.4 + shadcn/ui components
-- **State Management**: React Query + Context API
-- **Routing**: React Router DOM v6
-- **Authentication**: ABDM-integrated auth system
-
-### Key Features
-- **ABDM Integration**: Complete Ayushman Bharat Digital Mission compliance
-- **Real-time Tracking**: Medicine inventory and shipment tracking
-- **Quality Assurance**: Expiry alerts and compliance monitoring
-- **User Management**: Role-based access control
-- **Responsive Design**: Mobile-first approach
-
-## 📱 Application Features
-
-### Core Management
-- **Dashboard**: KPI overview with interactive charts
-- **Medicines**: Drug catalog and inventory management
-- **Shipments**: Logistics and delivery tracking
-- **Facilities**: Hospital and warehouse management
-- **Inventory**: Stock levels and expiry alerts
-
+## 📄 License
+MIT
 ### ABDM Health Records
 - **Patient Check-in**: Facility QR code system
 - **Medical Encounters**: Encounter management
@@ -187,6 +240,8 @@ docker-compose up --build
 
 - [Frontend Architecture Overview](./docs/FRONTEND_OUTLINE.md)
 - [ABDM Integration Guide](./docs/ABDM_INTEGRATION_GUIDE.md)
+- [Dashboard Integration Guide](./docs/DASHBOARD_INTEGRATION_GUIDE.md)
+- [Project Structure](./docs/PROJECT_STRUCTURE.md)
 - [Frontend README](./frontend/README.md)
 
 ### Code Style

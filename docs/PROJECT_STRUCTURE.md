@@ -194,22 +194,113 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 - Development setup instructions
 - Project structure documentation
 
+## Dashboard System (`frontend/src/dashboards/`)
+
+The dashboard system provides role-based access to five specialized healthcare dashboards:
+
+### Dashboard Structure
+
+| Directory | Purpose | Description |
+|-----------|---------|-------------|
+| `medicine/` | Medicine Dashboard | Pharmacy management, stock tracking, and warehouse orders |
+| `doctor/` | Doctor Dashboard | Patient management, diagnoses, prescriptions, and lab reports |
+| `patient/` | Patient Dashboard | Personal health data, prescriptions, appointments, and reports |
+| `registration-desk/` | Registration Desk Dashboard | Patient registration, queue management, and appointment scheduling |
+| `laboratory/` | Laboratory Dashboard | Lab test management, report uploads, and result processing |
+| `shared/` | Shared Components | Common services, hooks, and utilities for all dashboards |
+
+### Dashboard Features
+
+#### Medicine Dashboard
+- **Stock Management**: Real-time inventory tracking with automated alerts
+- **Warehouse Integration**: Automated ordering system for low-stock items
+- **Transaction History**: Complete audit trail of stock movements
+- **Alert System**: Configurable alerts for low stock, expired medicines, and reorder points
+- **API Integration**: Mock warehouse API for automated ordering
+
+#### Doctor Dashboard
+- **Patient Management**: Comprehensive patient search and history
+- **Diagnosis System**: Structured diagnosis entry with symptom tracking
+- **Prescription Management**: Digital prescription creation and management
+- **Lab Report Integration**: Access to patient lab results and reports
+- **Follow-up Tracking**: Automated follow-up scheduling and reminders
+
+#### Patient Dashboard
+- **Health Overview**: Personal health summary and statistics
+- **Prescription Access**: View and download prescription records
+- **Appointment Management**: Schedule and manage healthcare appointments
+- **Lab Results**: Access to personal lab reports and results
+- **Report Downloads**: Downloadable health reports and documents
+
+#### Registration Desk Dashboard
+- **Patient Registration**: Complete patient onboarding system
+- **Queue Management**: Real-time queue tracking and management
+- **Appointment Scheduling**: Doctor and lab appointment coordination
+- **Patient Search**: Advanced patient lookup and management
+- **Daily Reports**: Registration and appointment statistics
+
+#### Laboratory Dashboard
+- **Test Management**: Lab test catalog and specifications
+- **Report Processing**: Lab report creation and result entry
+- **File Uploads**: Secure lab report file management
+- **Result Analysis**: Abnormal result detection and flagging
+- **Priority Management**: Urgent test prioritization system
+
+### Shared Services
+
+#### Authentication & Authorization
+- **Role-Based Access**: Granular permission system for different user types
+- **Protected Routes**: Secure dashboard access with role validation
+- **Session Management**: Secure token-based authentication
+- **Permission System**: Fine-grained access control for dashboard features
+
+#### Data Management
+- **API Services**: Centralized API communication layer
+- **Real-time Updates**: WebSocket integration for live data updates
+- **Error Handling**: Comprehensive error management and user feedback
+- **Notification System**: Toast notifications for user actions
+
+#### UI Components
+- **Responsive Design**: Mobile-first approach with Tailwind CSS
+- **Accessibility**: WCAG-compliant components for inclusive design
+- **Performance**: Optimized components with lazy loading
+- **Consistency**: Shared design system across all dashboards
+
+### Backend Integration
+
+#### Database Models
+- **Patient Management**: Complete patient data model with medical history
+- **Diagnosis System**: Structured diagnosis and symptom tracking
+- **Prescription Management**: Digital prescription workflow
+- **Lab Reports**: Comprehensive lab test and result management
+- **Queue System**: Real-time queue and appointment management
+
+#### API Endpoints
+- **Dashboard APIs**: Specialized endpoints for each dashboard type
+- **Real-time Updates**: WebSocket endpoints for live data streaming
+- **File Management**: Secure file upload and download endpoints
+- **Authentication**: JWT-based authentication and authorization
+
 ## Future Enhancements
 
 ### Planned Additions
 - Mobile application in `mobile/` directory
-- Additional backend entities (users, facilities, shipments)
 - Enhanced ABDM integration features
 - Real-time notifications with WebSocket
 - Advanced analytics and reporting
 - Multi-language support
 - Enhanced security features
+- AI-powered health insights
+- Telemedicine integration
+- Advanced queue optimization
 
 ### Scalability Considerations
-- Modular architecture for easy extension
-- Clear separation of concerns
+- Modular dashboard architecture for easy extension
+- Clear separation of concerns between dashboards
 - Type-safe development with TypeScript
 - Comprehensive documentation for team collaboration
 - Standard development workflows and tooling
+- Microservices-ready backend architecture
+- Horizontal scaling capabilities
 
-This structure provides a solid foundation for a healthcare supply chain management platform with room for growth and enhancement.
+This structure provides a comprehensive healthcare management platform with specialized dashboards for different user roles, ensuring efficient healthcare operations and improved patient care.

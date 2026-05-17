@@ -1,56 +1,5 @@
 # SwasthaTrack Backend
 
-## Project Overview
-
-**SwasthaTrack Backend** is the FastAPI-based backend server for the SwasthaTrack pharmaceutical supply chain management platform. It provides RESTful APIs for medicine management, user authentication, and ABDM integration.
-
-> **Note**: This is the backend component of the SwasthaTrack project. See the main [README.md](../README.md) for complete project overview.
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Python 3.8+
-- pip
-
-### Installation
-
-```bash
-# Navigate to backend directory
-cd backend
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Start the development server
-uvicorn main:app --reload
-```
-
-The API will be available at `http://localhost:8000`
-
-### API Documentation
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
-
-## 🛠 Tech Stack
-
-### Core Technologies
-- **Framework**: FastAPI 0.104.1
-- **ASGI Server**: Uvicorn 0.24.0
-- **Database ORM**: SQLAlchemy 2.0.23
-- **Database Migration**: Alembic 1.12.1
-- **Database Driver**: psycopg2-binary 2.9.9
-- **Validation**: Pydantic 2.5.0
-- **Authentication**: python-jose + passlib
-
-### Key Features
-- **RESTful API**: Complete CRUD operations
-- **Automatic Documentation**: OpenAPI/Swagger integration
-- **Database Integration**: SQLAlchemy ORM with PostgreSQL support
-- **CORS Support**: Cross-origin resource sharing for frontend integration
-- **Type Safety**: Full Pydantic validation
-- **Extensible Architecture**: Easy to add new models and routes
-
-## 📁 Project Structure
 
 ```
 backend/

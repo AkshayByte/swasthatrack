@@ -17,6 +17,14 @@ export interface ABDMUser {
   isVerified: boolean;
 }
 
+// New User Interface for our role-based system
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 // ABDM Authentication Response
 export interface ABDMAuthResponse {
   accessToken: string;
@@ -26,6 +34,15 @@ export interface ABDMAuthResponse {
   user: ABDMUser;
 }
 
+// New Authentication Response for our system
+export interface AuthResponse {
+  token: string;
+  role: string;
+  userId: string;
+  name: string;
+  email?: string;
+}
+
 // ABDM Login Request
 export interface ABDMLoginRequest {
   abhaNumber?: string;
@@ -33,6 +50,12 @@ export interface ABDMLoginRequest {
   verificationMethod: 'aadhaar_otp' | 'mobile_otp' | 'password';
   otp?: string;
   password?: string;
+}
+
+// New Login Request for our system
+export interface LoginRequest {
+  email: string;
+  password: string;
 }
 
 // ABDM Registration Request
@@ -84,29 +107,31 @@ export interface M1DemoAuthRequest {
 }
 
 export interface AuthContextType {
-  user: ABDMUser | null;
+  user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  accessToken: string | null;
-  tokenExpiry: number | null;
-  
+  token: string | null;
+
+  // New login method for our system
+  login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
+
   // ABDM Login methods
   initiateLogin: (request: ABDMLoginRequest) => Promise<{ success: boolean; message: string; requestId?: string; maskedMobile?: string }>;
   verifyOTP: (requestId: string, otp: string) => Promise<{ success: boolean; message: string; authData?: ABDMAuthResponse }>;
   loginWithPassword: (abhaNumber: string, password: string) => Promise<{ success: boolean; message: string; authData?: ABDMAuthResponse }>;
-  
+
   // ABDM Registration methods
   initiateABHACreation: (aadhaarNumber: string, consent: boolean) => Promise<{ success: boolean; message: string; requestId?: string; abhaAddresses?: string[] }>;
   verifyAadhaarOTP: (requestId: string, otp: string) => Promise<{ success: boolean; message: string; abhaData?: any }>;
   selectABHAAddress: (requestId: string, abhaAddress: string) => Promise<{ success: boolean; message: string; authData?: ABDMAuthResponse }>;
-  
+
   // M1 ABDM Integration methods
   m1CreateABHAByAadhaar: (request: M1ABHACreationRequest) => Promise<{ success: boolean; message: string; txnId?: string; abhaData?: any }>;
   m1CreateABHAByDemoAuth: (request: M1DemoAuthRequest) => Promise<{ success: boolean; message: string; abhaData?: any }>;
   m1VerifyABHAByOTP: (abhaNumber: string, method: 'aadhaar' | 'mobile') => Promise<{ success: boolean; message: string; txnId?: string }>;
   m1CompleteABHAVerification: (txnId: string, otp: string) => Promise<{ success: boolean; message: string; profileData?: any }>;
   m1SearchABHAByMobile: (mobileNumber: string) => Promise<{ success: boolean; message: string; accounts?: any[] }>;
-  
+
   // Utility methods
   logout: () => void;
   refreshToken: () => Promise<boolean>;

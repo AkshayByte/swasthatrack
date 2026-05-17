@@ -7,7 +7,13 @@ import inspect from "vite-plugin-inspect";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 8080,
+    port: 8081,
+    proxy: {
+      '/api': {
+        target: process.env.VITE_ABDM_API_BASE_URL || 'http://localhost:8000',
+        changeOrigin: true,
+      }
+    }
   },
   plugins: [
     react(),

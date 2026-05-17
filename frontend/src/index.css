@@ -2,140 +2,87 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
-    /* Healthcare Professional Color System */
-    --background: 210 100% 98%;
-    --foreground: 215 25% 15%;
+    /* Light Mode - Clean, Clinical, & Premium */
+    --background: 210 40% 98%;
+    /* Light Blue-Grey */
+    --foreground: 222 47% 11%;
+    /* Dark Slate */
 
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
+    /* Pure White */
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
+    --popover-foreground: 222 47% 11%;
 
-    /* Primary: Professional Healthcare Blue */
-    --primary: 200 95% 45%;
-    --primary-foreground: 0 0% 100%;
-    --primary-light: 200 85% 55%;
-    --primary-dark: 200 95% 35%;
+    --primary: 199 89% 48%;
+    /* Deep Teal */
+    --primary-foreground: 210 40% 98%;
 
-    /* Secondary: Medical Green */
-    --secondary: 142 76% 36%;
-    --secondary-foreground: 0 0% 100%;
-    --secondary-light: 142 76% 46%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11%;
 
-    /* Healthcare System Colors */
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
-    --danger: 0 84% 60%;
-    --danger-foreground: 0 0% 100%;
-    --info: 200 95% 45%;
-    --info-foreground: 0 0% 100%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222 47% 11%;
 
-    --accent: 200 85% 92%;
-    --accent-foreground: 200 95% 35%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 199 89% 48%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 200 95% 45%;
+    --radius: 0.75rem;
 
-    --radius: 0.5rem;
-
-    /* Healthcare Dashboard Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-light)));
-    --gradient-secondary: linear-gradient(135deg, hsl(var(--secondary)), hsl(var(--secondary-light)));
-    --gradient-success: linear-gradient(135deg, hsl(var(--success)), hsl(142 76% 46%));
-    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
-    --gradient-card: linear-gradient(145deg, hsl(var(--card)), hsl(210 40% 99%));
-
-    /* Professional Shadows */
-    --shadow-soft: 0 2px 8px -2px hsl(var(--primary) / 0.1);
-    --shadow-medium: 0 4px 16px -4px hsl(var(--primary) / 0.15);
-    --shadow-strong: 0 8px 32px -8px hsl(var(--primary) / 0.2);
-    --shadow-glow: 0 0 20px hsl(var(--primary) / 0.3);
-
-    /* Animation Variables */
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Premium Gradients - Light */
+    --gradient-hero: linear-gradient(135deg, hsl(210 40% 98%) 0%, hsl(214 32% 91%) 100%);
+    --gradient-card: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 252, 0.5) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(199 89% 48%) 0%, hsl(199 89% 58%) 100%);
+    --shadow-glow: 0 0 20px hsl(199 89% 48% / 0.15);
   }
 
   .dark {
-    --background: 215 28% 7%;
+    /* Dark Mode - Sleek, Modern, & Easy on Eyes */
+    --background: 222 47% 11%;
+    /* Dark Slate Blue */
     --foreground: 210 40% 98%;
 
-    --card: 215 28% 9%;
+    --card: 217 33% 17%;
+    /* Slightly lighter than bg */
     --card-foreground: 210 40% 98%;
 
-    --popover: 215 28% 9%;
+    --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 200 95% 45%;
-    --primary-foreground: 0 0% 100%;
-    --primary-light: 200 85% 55%;
-    --primary-dark: 200 95% 35%;
+    --primary: 199 89% 48%;
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 142 76% 36%;
-    --secondary-foreground: 0 0% 100%;
-    --secondary-light: 142 76% 46%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
 
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
-    --danger: 0 84% 60%;
-    --danger-foreground: 0 0% 100%;
-    --info: 200 95% 45%;
-    --info-foreground: 0 0% 100%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
 
-    --muted: 215 28% 15%;
-    --muted-foreground: 215 20% 65%;
-
-    --accent: 215 28% 15%;
+    --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 215 28% 15%;
-    --input: 215 28% 15%;
-    --ring: 200 95% 45%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 199 89% 48%;
+
+    /* Premium Gradients - Dark */
+    --gradient-hero: linear-gradient(135deg, hsl(222 47% 11%) 0%, hsl(217 33% 15%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(217 33% 17%) 0%, hsl(217 33% 15%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(199 89% 48%) 0%, hsl(199 89% 38%) 100%);
+    --shadow-glow: 0 0 20px hsl(199 89% 48% / 0.25);
   }
 }
 
@@ -146,106 +93,78 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-  }
-
-  html {
-    scroll-behavior: smooth;
+    background-image: var(--gradient-hero);
+    background-attachment: fixed;
   }
 }
 
 @layer components {
-  /* Professional Card Styles */
-  .card-healthcare {
-    @apply bg-gradient-to-br from-card to-accent/20 border border-border/50;
-    box-shadow: var(--shadow-soft);
+
+  /* Glassmorphism Utilities */
+  .glass-panel {
+    @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-white/20 shadow-lg;
   }
 
-  .card-stat {
-    @apply card-healthcare hover:shadow-lg transition-all duration-300;
+  .glass-card {
+    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-border/50 shadow-sm hover:shadow-md transition-all duration-300;
   }
 
-  /* Button Variants */
-  .btn-healthcare {
-    @apply bg-gradient-to-r from-primary to-primary-light text-primary-foreground;
-    @apply hover:from-primary-dark hover:to-primary;
-    @apply transition-all duration-300 shadow-md hover:shadow-lg;
+  /* Premium Card Styles */
+  .card-premium {
+    @apply bg-card border border-border/60 shadow-sm hover:shadow-lg transition-all duration-300 rounded-xl;
+    background-image: var(--gradient-card);
   }
 
-  .btn-secondary-healthcare {
-    @apply bg-gradient-to-r from-secondary to-secondary-light text-secondary-foreground;
-    @apply hover:opacity-90 transition-all duration-300 shadow-md hover:shadow-lg;
+  /* Modern Button Styles */
+  .btn-primary-gradient {
+    @apply bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-300 border-0;
   }
 
-  /* Dashboard Animations */
-  .fade-in {
-    animation: fadeIn 0.5s ease-out;
+  /* Gradient Utilities */
+  .bg-gradient-primary {
+    background-image: var(--gradient-primary);
   }
 
-  .slide-up {
-    animation: slideUp 0.6s ease-out;
-  }
-
-  .scale-in {
-    animation: scaleIn 0.4s ease-out;
-  }
-}
-
-@layer utilities {
   .text-gradient-primary {
-    @apply bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent;
+    background-image: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
-  .text-gradient-secondary {
-    @apply bg-gradient-to-r from-secondary to-secondary-light bg-clip-text text-transparent;
+  /* Dashboard Grid Layouts */
+  .dashboard-grid {
+    @apply grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4;
   }
 
-  .border-gradient {
-    border-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary))) 1;
+  /* Animations */
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out forwards;
   }
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
   }
+
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* Chart Customizations */
-.recharts-wrapper {
-  @apply text-sm;
-}
-
-.recharts-cartesian-axis-tick-value {
-  @apply fill-muted-foreground text-xs;
-}
-
-.recharts-legend-wrapper {
-  @apply text-sm;
 }
