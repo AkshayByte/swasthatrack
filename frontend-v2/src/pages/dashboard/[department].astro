@@ -1,0 +1,58 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import RegistrationDashboard from '../../components/react/RegistrationDashboard';
+import DoctorDashboard from '../../components/react/DoctorDashboard';
+import PharmacyDashboard from '../../components/react/PharmacyDashboard';
+import LabDashboard from '../../components/react/LabDashboard';
+import AdminDashboard from '../../components/react/AdminDashboard';
+
+export function getStaticPaths() {
+  return [
+    { params: { department: 'registration' } },
+    { params: { department: 'doctor' } },
+    { params: { department: 'pharmacy' } },
+    { params: { department: 'lab' } },
+    { params: { department: 'admin' } },
+  ];
+}
+
+const { department } = Astro.params;
+
+const metaMap = {
+  registration: {
+    title: 'Registration & AI Triage Dashboard - SwasthaTrack',
+    description: 'Patient check-in, ABHA identity generation, and real-time AI triage queue allocation.'
+  },
+  doctor: {
+    title: 'Doctor Clinical Consultation Dashboard - SwasthaTrack',
+    description: 'AI-prioritized clinical queue examination, diagnostic recording, and direct pharmacy prescription routing.'
+  },
+  pharmacy: {
+    title: 'Pharmacy & Stock Dashboard - SwasthaTrack',
+    description: 'Digital prescription dispensation station, batch inventory tracking, and ABDM medical records.'
+  },
+  lab: {
+    title: 'Diagnostics & Pathology Laboratory - SwasthaTrack',
+    description: 'Diagnostic specimen tracking, pathology test result management, and automated diagnostic reports.'
+  },
+  admin: {
+    title: 'Hospital Admin & System Telemetry - SwasthaTrack',
+    description: 'Hospital operations monitoring, staff role assignments, and FastAPI system health telemetry.'
+  }
+};
+
+const meta = metaMap[department as keyof typeof metaMap] || {
+  title: 'Dashboard - SwasthaTrack',
+  description: 'SwasthaTrack Hospital Management Dashboard'
+};
+---
+
+<Layout title={meta.title} description={meta.description}>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    {department === 'registration' && <RegistrationDashboard client:load />}
+    {department === 'doctor' && <DoctorDashboard client:load />}
+    {department === 'pharmacy' && <PharmacyDashboard client:load />}
+    {department === 'lab' && <LabDashboard client:load />}
+    {department === 'admin' && <AdminDashboard client:load />}
+  </div>
+</Layout>

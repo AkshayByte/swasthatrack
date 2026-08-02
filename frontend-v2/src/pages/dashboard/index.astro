@@ -1,0 +1,13 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import UnifiedDashboard from '../../components/react/UnifiedDashboard';
+---
+
+<Layout
+  title="Unified Operations Dashboard - SwasthaTrack"
+  description="Central hub for hospital operations, department selection, and real-time healthcare telemetry."
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <UnifiedDashboard client:load />
+  </div>
+</Layout>
