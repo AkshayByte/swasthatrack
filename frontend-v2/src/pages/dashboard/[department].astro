@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import AuthShield from '../../components/react/AuthShield';
 import RegistrationDashboard from '../../components/react/RegistrationDashboard';
 import DoctorDashboard from '../../components/react/DoctorDashboard';
 import PharmacyDashboard from '../../components/react/PharmacyDashboard';
@@ -49,10 +50,12 @@ const meta = metaMap[department as keyof typeof metaMap] || {
 
 <Layout title={meta.title} description={meta.description}>
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    {department === 'registration' && <RegistrationDashboard client:load />}
-    {department === 'doctor' && <DoctorDashboard client:load />}
-    {department === 'pharmacy' && <PharmacyDashboard client:load />}
-    {department === 'lab' && <LabDashboard client:load />}
-    {department === 'admin' && <AdminDashboard client:load />}
+    <AuthShield client:load requiredDepartment={department} departmentTitle={meta.title}>
+      {department === 'registration' && <RegistrationDashboard client:load />}
+      {department === 'doctor' && <DoctorDashboard client:load />}
+      {department === 'pharmacy' && <PharmacyDashboard client:load />}
+      {department === 'lab' && <LabDashboard client:load />}
+      {department === 'admin' && <AdminDashboard client:load />}
+    </AuthShield>
   </div>
 </Layout>

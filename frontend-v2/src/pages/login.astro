@@ -1,0 +1,35 @@
+---
+import Layout from '../layouts/Layout.astro';
+import AuthShield from '../components/react/AuthShield';
+---
+
+<Layout
+  title="Clinical Staff Gateway & Authentication - SwasthaTrack"
+  description="Secure access portal for authorized hospital physicians, dispensing pharmacists, laboratory pathologists, and clinical staff."
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <AuthShield client:load>
+      <div class="glass-card rounded-2xl p-8 border border-slate-200 dark:border-slate-800 text-center max-w-xl mx-auto">
+        <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto mb-3">
+          <svg class="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">
+          Clinical Authentication Active
+        </h3>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-6">
+          Your hospital staff credentials have been validated with ABDM level-3 security clearance.
+        </p>
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <a
+            href="/dashboard"
+            class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-sm font-bold shadow-md hover:shadow-cyan-500/25 transition"
+          >
+            Enter Operations Console →
+          </a>
+        </div>
+      </div>
+    </AuthShield>
+  </div>
+</Layout>

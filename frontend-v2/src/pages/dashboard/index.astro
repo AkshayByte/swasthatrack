@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import AuthShield from '../../components/react/AuthShield';
 import UnifiedDashboard from '../../components/react/UnifiedDashboard';
 ---
 
@@ -8,6 +9,8 @@ import UnifiedDashboard from '../../components/react/UnifiedDashboard';
   description="Central hub for hospital operations, department selection, and real-time healthcare telemetry."
 >
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <UnifiedDashboard client:load />
+    <AuthShield client:load departmentTitle="Hospital Unified Operations Console">
+      <UnifiedDashboard client:load />
+    </AuthShield>
   </div>
 </Layout>
