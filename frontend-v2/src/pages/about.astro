@@ -1,0 +1,81 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+  title="About SwasthaTrack - Intelligent Healthcare Operations"
+  description="Discover the mission, architecture, and technology behind SwasthaTrack's AI triage and hospital management platform."
+>
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 space-y-12">
+    
+    <!-- Header -->
+    <div class="text-center max-w-3xl mx-auto space-y-4">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-100 dark:bg-cyan-950 text-cyan-800 dark:text-cyan-300 text-xs font-bold">
+        Mission & Architecture
+      </div>
+      <h1 class="text-3xl sm:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+        Modernizing Clinical Operations with AI-Powered Precision
+      </h1>
+      <p class="text-base text-slate-600 dark:text-slate-400">
+        SwasthaTrack was engineered to solve emergency room delays, fragmented paper prescriptions, and hospital queue inefficiencies through unified multi-department automation.
+      </p>
+    </div>
+
+    <!-- 3 Core Pillars -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3">
+        <div class="w-10 h-10 rounded-xl bg-cyan-100 dark:bg-cyan-950 text-cyan-600 dark:text-cyan-400 font-bold flex items-center justify-center">
+          01
+        </div>
+        <h3 class="font-bold text-slate-900 dark:text-white text-base">Instant AI Triage</h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+          Automated algorithmic assessment evaluates symptom complaints in real-time to prioritize high-acuity and emergency conditions immediately.
+        </p>
+      </div>
+
+      <div class="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-bold flex items-center justify-center">
+          02
+        </div>
+        <h3 class="font-bold text-slate-900 dark:text-white text-base">Direct Order Routing</h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+          Physician prescriptions and lab test orders stream instantaneously to Pharmacy and Laboratory consoles without physical paperwork delays.
+        </p>
+      </div>
+
+      <div class="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-bold flex items-center justify-center">
+          03
+        </div>
+        <h3 class="font-bold text-slate-900 dark:text-white text-base">ABDM Compliance</h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+          National Ayushman Bharat Digital Mission interoperability ensures cryptographic patient consent, ABHA health IDs, and FHIR data standards.
+        </p>
+      </div>
+    </div>
+
+    <!-- Technical Architecture Card -->
+    <div class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 shadow-sm space-y-6">
+      <h2 class="text-xl font-bold text-slate-900 dark:text-white">Under the Hood: The v2.0 Tech Stack</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+          <div class="font-bold text-slate-900 dark:text-white">Astro v5 (MPA)</div>
+          <div class="text-slate-500 dark:text-slate-400 mt-1">Zero-JS static routing for sub-50ms TTFB and perfect SEO indexation.</div>
+        </div>
+        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+          <div class="font-bold text-slate-900 dark:text-white">React 19 Islands</div>
+          <div class="text-slate-500 dark:text-slate-400 mt-1">Selective client-side hydration for 5 interactive department workspaces.</div>
+        </div>
+        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+          <div class="font-bold text-slate-900 dark:text-white">FastAPI & Python</div>
+          <div class="text-slate-500 dark:text-slate-400 mt-1">High-throughput REST API backend handling asynchronous hospital orders.</div>
+        </div>
+        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+          <div class="font-bold text-slate-900 dark:text-white">Tailwind CSS v4</div>
+          <div class="text-slate-500 dark:text-slate-400 mt-1">Modern design token system with glassmorphism and native dark mode.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</Layout>
