@@ -1,147 +1,98 @@
-# SwasthaTrack Backend
+# SwasthaTrack Backend (FastAPI)
 
+Asynchronous REST API powering the SwasthaTrack healthcare platform, built with **FastAPI**, **SQLAlchemy**, and **Pydantic v2**.
 
-```
+## Architecture & Directory Structure
+
+```text
 backend/
-├── main.py              # FastAPI application entry point
-├── models/              # SQLAlchemy database models
-│   └── medicine.py      # Medicine entity model
-├── routes/              # API route handlers
-│   └── medicine.py      # Medicine CRUD operations
-├── schemas/             # Pydantic validation models
-│   └── medicine.py      # Medicine request/response schemas
+├── main.py              # Application entry point, middleware & router aggregation
+├── database.py          # SQLAlchemy engine, session maker & declarative Base
+├── models/              # SQLAlchemy ORM database models
+│   ├── appointment.py   # Appointments & scheduling
+│   ├── diagnosis.py     # Clinical diagnoses, symptoms & doctor notes
+│   ├── lab_report.py    # Diagnostic lab test orders & results
+│   ├── medicine.py      # Medicine inventory & stock records
+│   ├── patient.py       # Patient profiles & ABHA identifiers
+│   ├── prescription.py  # Digital prescriptions & dispensing status
+│   ├── queue.py         # Live OPD triage queues & token system
+│   └── user.py          # Staff accounts, roles & credentials
+├── routes/              # FastAPI route handlers (endpoints)
+│   ├── auth.py          # JWT authentication, login & token issuance
+│   ├── dashboard.py     # Aggregated stats for role dashboards
+│   ├── medicine.py      # Pharmacy inventory CRUD & stock alerts
+│   ├── patients.py      # Patient record management & lookups
+│   └── queue.py         # OPD queue dispatching & token updates
+├── schemas/             # Pydantic models for request validation & response serialization
+│   ├── appointment.py
+│   ├── auth.py
+│   ├── dashboard.py
+│   ├── diagnosis.py
+│   ├── lab_report.py
+│   ├── medicine.py
+│   ├── patient.py
+│   ├── prescription.py
+│   └── queue.py
+├── utils/
+│   └── security.py      # Password hashing (bcrypt) & JWT token handling
+├── tests/               # Pytest integration & unit test suite
+│   ├── conftest.py
+│   ├── test_auth.py
+│   ├── test_dashboard.py
+│   └── test_medicine.py
 ├── requirements.txt     # Python dependencies
-└── README.md           # This file
+└── pytest.ini          # Test runner configuration
 ```
 
-## 🔧 API Endpoints
+## Key Capabilities
 
-### Medicine Management
-- `GET /medicines` - List all medicines
-- `POST /medicines` - Create new medicine
-- `GET /medicines/{id}` - Get medicine by ID
-- `PUT /medicines/{id}` - Update medicine
-- `DELETE /medicines/{id}` - Delete medicine
+- **Role-Based API Access**: Granular endpoints for Registration, Doctors, Pharmacy, Laboratory, and Admin users.
+- **Stateless JWT Authentication**: Secure password hashing via `passlib[bcrypt]` and HS256 JWT tokens with expiry checks.
+- **Database Flexibility**: Default lightweight SQLite for zero-config local development, easily switched to PostgreSQL via `DATABASE_URL` for production.
+- **Automatic Interactive Docs**: OpenAPI documentation generated automatically at `/docs` (Swagger UI) and `/redoc` (ReDoc).
 
-### Root
-- `GET /` - Health check endpoint
+## Getting Started
 
-## 🗄️ Database Models
+### 1. Set Up Python Environment
+```bash
+# Create virtual environment
+python -m venv venv
 
-### Medicine Model
-```python
-class Medicine(Base):
-    __tablename__ = "medicines"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
-    description = Column(String)
-    quantity = Column(Integer, default=0)
-    expiry_date = Column(Date)
+# Activate virtual environment
+# Windows (PowerShell):
+.\venv\Scripts\Activate.ps1
+# Linux / macOS:
+source venv/bin/activate
 ```
 
-## 📊 Available Scripts
+### 2. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Configure Environment Variables
+Copy `.env.example` to `.env`:
+```bash
+cp .env.example .env
+```
+Default values work out of the box for local SQLite development.
+
+### 4. Run the API Server
+```bash
+uvicorn main:app --reload --port 8000
+```
+
+- API Base: `http://localhost:8000`
+- Interactive Swagger UI: `http://localhost:8000/docs`
+- Alternative ReDoc: `http://localhost:8000/redoc`
+
+## Running Tests
 
 ```bash
-# Development server with auto-reload
-uvicorn main:app --reload
-
-# Production server
-uvicorn main:app --host 0.0.0.0 --port 8000
-
-# Run with specific workers
-uvicorn main:app --workers 4
-```
-
-## 🧪 Testing
-
-### Setup Test Environment
-```bash
-# Install test dependencies
-pip install pytest pytest-asyncio httpx
-
-# Run tests
 pytest
 ```
-
-## 📋 Environment Variables
-
-Create a `.env` file in the backend directory:
-
-```env
-DATABASE_URL=postgresql://user:password@localhost/dbname
-SECRET_KEY=your-secret-key-here
-ABDM_API_URL=https://api.abdm.gov.in
-ENVIRONMENT=development
-```
-
-## 🚀 Deployment
-
-### Production Build
+Run specific test modules:
 ```bash
-# Install production dependencies
-pip install -r requirements.txt
-
-# Start production server
-uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+pytest tests/test_auth.py
+pytest tests/test_dashboard.py
 ```
-
-### Docker Support
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-COPY . .
-EXPOSE 8000
-
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-## 🔐 Security Considerations
-
-- **CORS Configuration**: Currently allows all origins (configure for production)
-- **Input Validation**: Pydantic models validate all request data
-- **Database Security**: Use environment variables for sensitive data
-- **Authentication**: JWT token integration
-
-## 📚 Documentation
-
-- [Main Project README](../README.md)
-- [Project Structure](../docs/PROJECT_STRUCTURE.md)
-- [Frontend Integration](../frontend/README.md)
-
-## 🤝 Contributing
-
-1. Follow PEP 8 style guidelines
-2. Use type hints throughout the code
-3. Write comprehensive docstrings
-4. Include tests for new features
-5. Update API documentation
-
-### Code Style
-```bash
-# Format code with black
-black .
-
-# Sort imports with isort
-isort .
-
-# Lint with flake8
-flake8 .
-```
-
-## 📞 Support
-
-- **Technical Support**: support@swasthatrack.gov.in
-- **Documentation**: Check the `docs/` directory in the project root
-- **API Issues**: Use the interactive API documentation at `/docs`
-
-## 📄 License
-
-This project is part of the Ayushman Bharat Digital Mission initiative, Government of India.
-
----
-
-**Built with ❤️ for Indian Healthcare** | **Powered by ABDM**
