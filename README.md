@@ -101,10 +101,11 @@ SwasthaTrack/
 │   └── requirements.txt     # Python dependencies
 ├── frontend-v2/             # Astro MPA + React Islands dashboards
 │   ├── src/
-│   │   ├── components/react # Hydrated React dashboard islands
-│   │   ├── layouts/         # Base layout with theme toggle & navigation
-│   │   ├── pages/           # Astro file-based routes & dynamic dashboard pages
-│   │   └── lib/api.ts       # Type-safe API communication layer
+│   │   ├── components/react # Hydrated React dashboard islands, AuthShield & StaffAuthButton
+│   │   ├── layouts/         # Base layout with persistent theme toggle & clinical session pill
+│   │   ├── lib/auth.ts      # Type-safe clinical auth, RBAC permissions, and staff passkeys
+│   │   ├── lib/api.ts       # Type-safe API communication layer
+│   │   └── pages/           # Astro file-based routes, clinical login, and department consoles
 │   └── package.json
 ├── docs/                    # Architecture diagrams, ABDM guides, reports, and design specs
 │   ├── ABDM_INTEGRATION_GUIDE.md
@@ -181,7 +182,7 @@ npm run dev
 
 ## 🧪 Testing Backend Endpoints
 
-SwasthaTrack includes a Pytest suite covering authentication, queue transitions, and inventory endpoints:
+SwasthaTrack includes a Pytest test suite covering authentication, queue transitions, patient CRUD authorization, and inventory endpoints:
 
 ```bash
 cd backend
@@ -190,12 +191,13 @@ pytest -v
 
 ---
 
-## 🔒 Security & Data Compliance
+## 🔒 Security & RBAC Architecture
 
-- **Role-Based Access Control (RBAC)**: Route-level protection prevents unauthorized cross-department data tampering (e.g., pharmacists cannot alter clinical diagnosis notes).
-- **Stateless Tokens**: JWTs with configurable lifespans and bearer authentication headers.
-- **Data Validation**: Strict Pydantic models shield the database against malformed payloads and injection attempts.
-- **ABDM-Ready Architecture**: Data structures aligned with the National Health Authority (NHA) standards for ABHA linkage and consent artifacts.
+- **AuthShield Security Gatekeeper**: Client-side React island shielding `/dashboard` and all departmental routes (`/dashboard/[department]`). Automatically intercepts unauthenticated traffic with a secure login gate and blocks unauthorized cross-department access with an explicit **HTTP 403 Role Clearance** screen.
+- **Granular Role-Based Access Control (RBAC)**: Route-level protection on all FastAPI endpoints (`/api/patients/`, `/api/queue/`, `/api/medicines/`, `/api/dashboard/`) ensuring least-privilege access for Doctors, Pharmacists, Pathologists, Triage Staff, and Administrators.
+- **Stateless Tokens & Safe Hashing**: JWT tokens with configurable lifespans and bcrypt cryptographic password hashing with 72-byte safe boundary truncation.
+- **Strict Data Validation**: Pydantic v2 schemas shield the database against malformed payloads, injection attempts, and unexpected schema mutation.
+- **ABDM-Ready Architecture**: Data structures aligned with the National Health Authority (NHA) standards for ABHA linkage, health records, and consent artifacts.
 
 ---
 
