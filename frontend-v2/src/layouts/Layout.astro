@@ -21,6 +21,16 @@ const {
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <link rel="canonical" href={Astro.url.href} />
+
+    <!-- Google Analytics (GA4) Placeholder -->
+    <script is:inline async src="https://www.googletagmanager.com/gtag/js?id=G-SWSTHATRK0"></script>
+    <script is:inline>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-SWSTHATRK0');
+    </script>
 
     <!-- Prevent FOUC for Dark Mode -->
     <script is:inline>
