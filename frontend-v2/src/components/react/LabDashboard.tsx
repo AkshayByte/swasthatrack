@@ -200,8 +200,8 @@ export default function LabDashboard() {
 
               <div className="flex items-center justify-between pt-2">
                 <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                  <UploadCloud className="w-4 h-4 text-purple-600" />
-                  FastAPI Diagnostic DB Sync
+                  <UploadCloud className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  ABDM Diagnostic Record Sync
                 </div>
 
                 <button

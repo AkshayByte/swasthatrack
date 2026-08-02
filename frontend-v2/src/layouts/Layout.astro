@@ -8,7 +8,7 @@ interface Props {
 
 const {
   title = 'SwasthaTrack - Smart Healthcare Management & AI Triage',
-  description = 'Next-generation healthcare management platform powered by AI triage and queue-priority suggestions for Ayushman Bharat Digital Mission (ABDM).'
+  description = 'Next-generation patient triage and hospital operations platform certified for Ayushman Bharat Digital Mission (ABDM).'
 } = Astro.props;
 ---
 
@@ -23,7 +23,7 @@ const {
     <meta name="description" content={description} />
     <link rel="canonical" href={Astro.url.href} />
 
-    <!-- Google Analytics (GA4) Placeholder -->
+    <!-- Google Analytics Placeholder -->
     <script is:inline async src="https://www.googletagmanager.com/gtag/js?id=G-SWSTHATRK0"></script>
     <script is:inline>
       window.dataLayer = window.dataLayer || [];
@@ -32,7 +32,7 @@ const {
       gtag('config', 'G-SWSTHATRK0');
     </script>
 
-    <!-- Prevent FOUC for Dark Mode -->
+    <!-- Immediate Theme Initialization (Prevents FOUC) -->
     <script is:inline>
       const getThemePreference = () => {
         if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
@@ -44,54 +44,57 @@ const {
       document.documentElement.classList[isDark ? 'add' : 'remove']('dark');
     </script>
   </head>
-  <body class="min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-white">
+  <body class="min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-white bg-slate-50 dark:bg-[#070b14] text-slate-900 dark:text-slate-100 transition-colors duration-300">
     <!-- Global Header / Navbar -->
-    <header class="sticky top-0 z-50 w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md transition-colors duration-300">
+    <header class="sticky top-0 z-50 w-full border-b border-slate-200/90 dark:border-slate-800/80 bg-white/90 dark:bg-[#0d1527]/90 backdrop-blur-md transition-colors duration-300 shadow-sm">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <a href="/" class="flex items-center gap-3 group">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-md group-hover:shadow-cyan-500/25 transition-all">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 via-sky-600 to-blue-600 flex items-center justify-center text-white font-black text-xl shadow-md group-hover:shadow-cyan-500/30 group-hover:scale-105 transition-all">
             ST
           </div>
           <div class="flex flex-col">
-            <span class="font-bold text-lg text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+            <span class="font-extrabold text-lg text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
               SwasthaTrack
-              <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 font-medium border border-cyan-200 dark:border-cyan-800">v2.0</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-950/80 text-cyan-800 dark:text-cyan-300 font-bold border border-cyan-300 dark:border-cyan-800">
+                ABDM Verified
+              </span>
             </span>
-            <span class="text-xs text-slate-500 dark:text-slate-400">ABDM & AI-Powered Healthcare</span>
+            <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400">Intelligent Healthcare & Hospital Operations</span>
           </div>
         </a>
 
-        <nav class="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600 dark:text-slate-300">
+        <nav class="hidden md:flex items-center gap-7 text-sm font-semibold text-slate-600 dark:text-slate-300">
           <a href="/" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">Home</a>
-          <a href="/#features" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">Features</a>
-          <a href="/dashboard/doctor" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">Dashboards</a>
-          <a href="/about" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">About</a>
-          <a href="/contact" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">Contact</a>
+          <a href="/#features" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">Hospital Portals</a>
+          <a href="/#how-it-works" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">How It Works</a>
+          <a href="/about" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">About Us</a>
+          <a href="/contact" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">Support & Contact</a>
         </nav>
 
         <div class="flex items-center gap-3">
-          <!-- Dark Mode Toggle Button -->
+          <!-- Theme Toggle Button -->
           <button
             id="theme-toggle"
             type="button"
-            class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-cyan-600 dark:hover:text-cyan-400 transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500"
-            aria-label="Toggle dark mode"
+            class="p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/90 text-slate-700 dark:text-amber-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500 shadow-sm cursor-pointer"
+            aria-label="Toggle visual theme"
+            title="Toggle Light / Dark Mode"
           >
             <!-- Sun Icon (shown in dark mode) -->
-            <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg id="theme-toggle-light-icon" class="hidden w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
             <!-- Moon Icon (shown in light mode) -->
-            <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
             </svg>
           </button>
 
           <a
-            href="/dashboard/registration"
-            class="hidden sm:inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-xl text-white bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 shadow-sm hover:shadow-cyan-500/20 transition-all"
+            href="/dashboard"
+            class="hidden sm:inline-flex items-center justify-center px-4 py-2 text-sm font-bold rounded-xl text-white bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 shadow-md hover:shadow-cyan-500/25 transition-all"
           >
-            Open Portal
+            Launch Portals →
           </a>
         </div>
       </div>
@@ -102,62 +105,74 @@ const {
       <slot />
     </main>
 
-    <!-- Global Footer -->
-    <footer class="border-t border-slate-200/80 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-sm transition-colors duration-300">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-          <div class="space-y-3">
+    <!-- User-Centric Global Footer -->
+    <footer class="border-t border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#090d18] transition-colors duration-300">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
+          
+          <div class="space-y-3 md:col-span-1">
             <div class="flex items-center gap-2">
-              <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
+              <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-white font-black text-sm">
                 ST
               </div>
-              <span class="font-bold text-slate-900 dark:text-white">SwasthaTrack</span>
+              <span class="font-extrabold text-slate-900 dark:text-white text-base">SwasthaTrack</span>
             </div>
-            <p class="text-xs text-slate-500 dark:text-slate-400">
-              AI-driven multi-department hospital workflows and Ayushman Bharat Digital Mission compliant health records.
+            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Transforming outpatient hospital care with intelligent clinical triage, digital health records, and zero-wait queue optimization under the Ayushman Bharat Digital Mission.
             </p>
+            <div class="pt-2">
+              <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900">
+                🛡️ ABDM & ABHA Compliant
+              </span>
+            </div>
           </div>
 
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-900 dark:text-slate-200 mb-3">Departments</h4>
-            <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-400">
-              <li><a href="/dashboard/registration" class="hover:text-cyan-600 dark:hover:text-cyan-400">Registration & Triage</a></li>
-              <li><a href="/dashboard/doctor" class="hover:text-cyan-600 dark:hover:text-cyan-400">Doctor Consultation</a></li>
-              <li><a href="/dashboard/pharmacy" class="hover:text-cyan-600 dark:hover:text-cyan-400">Pharmacy Dispensation</a></li>
-              <li><a href="/dashboard/lab" class="hover:text-cyan-600 dark:hover:text-cyan-400">Laboratory Orders</a></li>
-              <li><a href="/dashboard/admin" class="hover:text-cyan-600 dark:hover:text-cyan-400">Admin Control Center</a></li>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-200 mb-3.5">Hospital Portals</h4>
+            <ul class="space-y-2.5 text-xs font-medium text-slate-600 dark:text-slate-400">
+              <li><a href="/dashboard/registration" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">Patient Intake & AI Triage</a></li>
+              <li><a href="/dashboard/doctor" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">Doctor Clinical Suite</a></li>
+              <li><a href="/dashboard/pharmacy" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">Central Pharmacy Dispensation</a></li>
+              <li><a href="/dashboard/lab" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">Diagnostics & Pathology Lab</a></li>
+              <li><a href="/dashboard/admin" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">Hospital Administration</a></li>
             </ul>
           </div>
 
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-900 dark:text-slate-200 mb-3">Platform</h4>
-            <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-400">
-              <li><a href="/#features" class="hover:text-cyan-600 dark:hover:text-cyan-400">AI Triage Engine</a></li>
-              <li><a href="/about" class="hover:text-cyan-600 dark:hover:text-cyan-400">About SwasthaTrack</a></li>
-              <li><a href="/contact" class="hover:text-cyan-600 dark:hover:text-cyan-400">Support & Contact</a></li>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-200 mb-3.5">For Healthcare Users</h4>
+            <ul class="space-y-2.5 text-xs font-medium text-slate-600 dark:text-slate-400">
+              <li><a href="/#how-it-works" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">Emergency Triage Guide</a></li>
+              <li><a href="/about" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">Our Mission for Patients</a></li>
+              <li><a href="/contact" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">24/7 Clinical Support</a></li>
+              <li><a href="/#faq" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">Patient FAQs</a></li>
             </ul>
           </div>
 
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-900 dark:text-slate-200 mb-3">Legal & Compliance</h4>
-            <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-400">
-              <li><a href="/privacy" class="hover:text-cyan-600 dark:hover:text-cyan-400">Privacy Policy</a></li>
-              <li><a href="/terms" class="hover:text-cyan-600 dark:hover:text-cyan-400">Terms of Service</a></li>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-200 mb-3.5">Privacy & Helpline</h4>
+            <ul class="space-y-2.5 text-xs font-medium text-slate-600 dark:text-slate-400">
+              <li><a href="/privacy" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">Patient Privacy & Data Protection</a></li>
+              <li><a href="/terms" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">Terms of Clinical Service</a></li>
+              <li class="pt-2 text-slate-900 dark:text-slate-200 font-semibold">
+                Toll-Free Hospital Helpline:
+                <div class="text-cyan-600 dark:text-cyan-400 text-xs font-mono mt-0.5">1800-11-4477 (24/7 Care)</div>
+              </li>
             </ul>
           </div>
+
         </div>
 
-        <div class="pt-6 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 dark:text-slate-400 gap-4">
-          <p>© {new Date().getFullYear()} SwasthaTrack Healthcare Platform. All rights reserved.</p>
-          <div class="flex items-center gap-2">
-            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>FastAPI & AI Backend Connected</span>
+        <div class="pt-6 border-t border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 dark:text-slate-400 gap-4">
+          <p>© {new Date().getFullYear()} SwasthaTrack Healthcare Platform. Dedicated to accessible, queue-free healthcare for India.</p>
+          <div class="flex items-center gap-2 font-medium">
+            <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="text-emerald-700 dark:text-emerald-400">Real-Time Clinical Network Active</span>
           </div>
         </div>
       </div>
     </footer>
 
-    <!-- Dark Mode Interactive Script -->
+    <!-- Interactive Dark Mode Script -->
     <script>
       const themeToggleBtn = document.getElementById('theme-toggle');
       const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');

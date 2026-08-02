@@ -70,8 +70,8 @@ export default function UnifiedDashboard() {
     },
     {
       id: 'admin',
-      name: 'Admin & Telemetry',
-      desc: 'Hospital operations metrics, staff access roles & FastAPI health telemetry',
+      name: 'Hospital Administration',
+      desc: 'Operational oversight, department throughput metrics, staff duty rosters & care governance',
       icon: Shield,
       href: '/dashboard/admin',
       badge: 'All Systems OK',
@@ -95,17 +95,17 @@ export default function UnifiedDashboard() {
               Hospital Operations & AI Triage Center
             </h1>
             <p className="text-slate-300 text-sm sm:text-base mt-2 leading-relaxed">
-              Select a specialized department dashboard below to manage patient intake, doctor examinations, medication dispensation, diagnostic lab orders, or system governance.
+              Select a specialized department dashboard below to manage patient intake, doctor examinations, medication dispensation, diagnostic lab orders, or hospital governance.
             </p>
           </div>
 
-          <div className="flex flex-col gap-2 bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-md min-w-[200px]">
-            <span className="text-xs text-slate-400 font-medium">Platform Architecture</span>
-            <div className="flex items-center gap-2 text-sm font-bold text-cyan-300">
-              <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
-              <span>Astro MPA + React Islands</span>
+          <div className="flex flex-col gap-1.5 bg-white/10 p-4 rounded-2xl border border-white/15 backdrop-blur-md min-w-[210px]">
+            <span className="text-xs text-slate-300 font-medium">Hospital Care Network</span>
+            <div className="flex items-center gap-2 text-sm font-bold text-emerald-300">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>5 Portals Synchronized</span>
             </div>
-            <span className="text-[11px] text-slate-400">FastAPI & PostgreSQL Synced</span>
+            <span className="text-[11px] text-cyan-200 font-medium">🛡️ ABDM & ABHA Verified</span>
           </div>
         </div>
       </div>

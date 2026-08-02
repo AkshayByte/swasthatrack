@@ -20,10 +20,10 @@ export default function AdminDashboard() {
   ];
 
   const systemServices = [
-    { name: 'FastAPI REST Backend', status: 'Healthy', latency: '42ms', uptime: '99.98%' },
-    { name: 'Gemini AI Triage Engine', status: 'Operational', latency: '120ms', uptime: '99.94%' },
-    { name: 'PostgreSQL Clinical Store', status: 'Connected', latency: '18ms', uptime: '100.00%' },
-    { name: 'ABDM National Gateway', status: 'Authenticated', latency: '210ms', uptime: '99.85%' },
+    { name: 'Clinical Care Sync Engine', status: 'Healthy', latency: '42ms', uptime: '99.98%' },
+    { name: 'AI Clinical Triage Model', status: 'Operational', latency: '120ms', uptime: '99.94%' },
+    { name: 'Encrypted Health Record Vault', status: 'Connected', latency: '18ms', uptime: '100.00%' },
+    { name: 'National ABHA Gateway', status: 'Authenticated', latency: '210ms', uptime: '99.85%' },
   ];
 
   const handleRefresh = () => {
@@ -38,19 +38,19 @@ export default function AdminDashboard() {
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs font-semibold backdrop-blur-md mb-2 text-cyan-300">
-              <Shield className="w-3.5 h-3.5" /> Department 5: Administration & System Telemetry
+              <Shield className="w-3.5 h-3.5" /> Department 5: Administration & Governance
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Enterprise Hospital Operations & Infrastructure</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Hospital Operations & Governance Console</h1>
             <p className="text-slate-300 text-sm mt-1 max-w-2xl">
-              Cross-departmental monitoring, role access management, AI inference latency, and ABDM national gateway status overview.
+              Cross-departmental monitoring, clinical staff assignments, care throughput metrics, and national ABDM compliance status.
             </p>
           </div>
           <button
             onClick={handleRefresh}
-            className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md"
+            className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            <span>Telemetry Refresh</span>
+            <span>Refresh Status</span>
           </button>
         </div>
       </div>
@@ -60,7 +60,7 @@ export default function AdminDashboard() {
         {stats.map((item, idx) => {
           const Icon = item.icon;
           return (
-            <div key={idx} className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+            <div key={idx} className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#11192e] shadow-sm">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{item.title}</span>
                 <div className={`p-2.5 rounded-xl ${item.bg} ${item.color}`}>
@@ -79,14 +79,14 @@ export default function AdminDashboard() {
         
         {/* Left: System Infrastructure Status */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#11192e] p-6 shadow-sm">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <h2 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2">
-                <Server className="w-5 h-5 text-indigo-600" />
-                Service Health & Latency
+                <Server className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                Care Network Status
               </h2>
               <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> All Systems Nominal
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> All Systems Online
               </span>
             </div>
 
@@ -107,9 +107,9 @@ export default function AdminDashboard() {
 
             <div className="mt-6 p-4 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300">
               <div className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-1.5">
-                <Globe className="w-4 h-4 text-cyan-600" /> Cloudflare Edge + Astro MPA
+                <Globe className="w-4 h-4 text-cyan-600 dark:text-cyan-400" /> ABDM & Data Security Protocols
               </div>
-              Static Multi-Page Architecture delivers sub-50ms Time-to-First-Byte with zero hydration lag.
+              All patient records are end-to-end encrypted under National Health Authority guidelines with strict consent-governed access.
             </div>
           </div>
         </div>
