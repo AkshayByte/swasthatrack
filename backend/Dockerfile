@@ -1,49 +1,51 @@
-# ─── Stage 1: Build ───────────────────────────────────────
+# ─── Stage 1: Build (compile dependencies in virtualenv) ───
 FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
-# Install build dependencies for psycopg2
+# Install build tools for C-extensions if needed
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc libpq-dev && \
     rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+# Create virtual environment in /opt/venv
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
-# ─── Stage 2: Runtime ─────────────────────────────────────
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+
+# ─── Stage 2: Runtime (lean & secure) ───────────────────────
 FROM python:3.12-slim
 
-# Security: run as non-root
+# Create dedicated non-root application user
 RUN groupadd -r swastha && useradd -r -g swastha -d /app -s /sbin/nologin swastha
 
 WORKDIR /app
 
-# Install runtime PostgreSQL client lib only
+# Install runtime PostgreSQL client library & curl for diagnostics
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 curl && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy installed Python packages from builder
-COPY --from=builder /install /usr/local
+# Copy virtual environment from builder (paths match exactly at /opt/venv)
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy application code
 COPY . .
 
-# Don't copy .env or db files (handled by .dockerignore)
-
-# Own everything by the non-root user
+# Set permissions for non-root user
 RUN chown -R swastha:swastha /app
 
 USER swastha
 
-# Gunicorn will read this config
+# Python environment flags
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
+ENV PORT=8000
 
 EXPOSE 8000
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
 
 CMD ["gunicorn", "main:app", "-c", "gunicorn.conf.py"]
