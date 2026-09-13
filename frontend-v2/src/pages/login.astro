@@ -4,32 +4,121 @@ import AuthShield from '../components/react/AuthShield';
 ---
 
 <Layout
-  title="Clinical Staff Gateway & Authentication - SwasthaTrack"
-  description="Secure access portal for authorized hospital physicians, dispensing pharmacists, laboratory pathologists, and clinical staff."
+  title="Staff Login — SwasthaTrack Clinical Platform"
+  description="Secure sign-in for authorized hospital staff. Access your department console with role-based permissions."
 >
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <AuthShield client:load>
-      <div class="glass-card rounded-2xl p-8 border border-slate-200 dark:border-slate-800 text-center max-w-xl mx-auto">
-        <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto mb-3">
-          <svg class="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+  <div class="min-h-[calc(100vh-60px)] flex">
+
+    <!-- ─── Left: Brand Panel ─── -->
+    <div class="hidden lg:flex lg:w-[45%] flex-col justify-between p-12 bg-slate-900 dark:bg-slate-950 border-r border-slate-800 relative overflow-hidden">
+      <!-- Ambient glow -->
+      <div class="absolute -bottom-32 -left-20 w-80 h-80 bg-sky-600/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute top-24 -right-10 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <!-- Logo -->
+      <div class="flex items-center gap-3 relative z-10">
+        <div class="w-9 h-9 rounded-xl bg-sky-600 flex items-center justify-center shadow-lg">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
           </svg>
         </div>
-        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">
-          Clinical Authentication Active
-        </h3>
-        <p class="text-sm text-slate-600 dark:text-slate-400 mb-6">
-          Your hospital staff credentials have been validated with ABDM level-3 security clearance.
-        </p>
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <a
-            href="/dashboard"
-            class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-sm font-bold shadow-md hover:shadow-cyan-500/25 transition"
-          >
-            Enter Operations Console →
-          </a>
+        <div>
+          <div class="font-bold text-white text-base leading-none">SwasthaTrack</div>
+          <div class="text-[11px] text-slate-400 font-medium mt-0.5">Clinical Workflow Platform</div>
         </div>
       </div>
-    </AuthShield>
+
+      <!-- Main content -->
+      <div class="relative z-10 space-y-8">
+        <div>
+          <h2 class="text-3xl font-extrabold text-white leading-tight">
+            Your department.<br />
+            <span class="text-sky-400">Ready when you are.</span>
+          </h2>
+          <p class="mt-4 text-slate-400 text-sm leading-relaxed max-w-sm">
+            Sign in with your staff credentials or use the Quick Login to explore a role. Each console is purpose-built for how you actually work.
+          </p>
+        </div>
+
+        <!-- Department previews -->
+        <div class="space-y-2.5">
+          {[
+            { label: 'Registration & Triage', dot: 'bg-cyan-500', sub: 'Patient intake · AI urgency scoring' },
+            { label: 'Doctor Consultation', dot: 'bg-blue-500', sub: 'Queue management · E-prescriptions' },
+            { label: 'Pharmacy & Inventory', dot: 'bg-emerald-500', sub: 'Prescription feed · Stock control' },
+            { label: 'Pathology Lab', dot: 'bg-purple-500', sub: 'Sample tracking · Report publishing' },
+            { label: 'Administration', dot: 'bg-slate-400', sub: 'Throughput metrics · Staff roles' },
+          ].map(item => (
+            <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 border border-white/8 hover:bg-white/8 transition-colors">
+              <span class={`w-2 h-2 rounded-full ${item.dot} shrink-0`}></span>
+              <div>
+                <div class="text-sm font-medium text-white">{item.label}</div>
+                <div class="text-[11px] text-slate-500">{item.sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <!-- Footer note -->
+      <div class="relative z-10 text-xs text-slate-600 flex items-center gap-2">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+        Sessions protected by JWT · Role-based access control
+      </div>
+    </div>
+
+    <!-- ─── Right: Auth Panel ─── -->
+    <div class="flex-1 flex flex-col items-center justify-center px-6 py-12 bg-slate-50 dark:bg-[#070d1a]">
+      <div class="w-full max-w-md">
+
+        <!-- Mobile brand (shown on small screens only) -->
+        <div class="lg:hidden flex items-center gap-2 mb-8">
+          <div class="w-8 h-8 rounded-lg bg-sky-600 flex items-center justify-center">
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+          </div>
+          <span class="font-bold text-slate-900 dark:text-white">SwasthaTrack</span>
+        </div>
+
+        <div class="mb-8">
+          <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white">Staff Sign In</h1>
+          <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            Use Quick Login to instantly access any department console — no credentials needed for the demo.
+          </p>
+        </div>
+
+        <!-- AuthShield will render the login form or the authenticated state -->
+        <AuthShield client:load>
+          <!-- Shown when already authenticated -->
+          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-8 text-center space-y-5">
+            <div class="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-900 dark:text-white text-lg">You're signed in</h3>
+              <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                Your staff session is active. Head to your department console.
+              </p>
+            </div>
+            <a
+              href="/dashboard"
+              class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold text-white bg-sky-600 hover:bg-sky-700 transition-colors shadow-sm"
+            >
+              Go to my console →
+            </a>
+          </div>
+        </AuthShield>
+
+        <!-- Demo hint -->
+        <p class="mt-6 text-center text-xs text-slate-400 dark:text-slate-600">
+          This is an open demo. No real patient data is stored.
+        </p>
+
+      </div>
+    </div>
+
   </div>
 </Layout>

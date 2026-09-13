@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -8,28 +9,49 @@ from dotenv import load_dotenv
 import logging
 import time
 
+# Load environment variables
+load_dotenv()
+
+# Configuration
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+IS_PRODUCTION = ENVIRONMENT == "production"
+
 from database import create_tables
 from routes import medicine, dashboard, auth, patients, queue
 
-# Load environment variables
-load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan handler — replaces deprecated on_event('startup')."""
+    logger.info("Starting up SwasthaTrack API...")
+    create_tables()
+    yield
+    logger.info("SwasthaTrack API shut down.")
+
+
 app = FastAPI(
-    title="SwasthaTrack API", 
+    title="SwasthaTrack API",
     version="1.0.0",
-    description="Healthcare Management Platform API"
+    description="Healthcare Management Platform API",
+    lifespan=lifespan,
 )
 
-# CORS Configuration
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+# CORS Configuration — restrictive in production, permissive in dev
+if IS_PRODUCTION:
+    _default_origins = ""  # must be set explicitly via ALLOWED_ORIGINS
+else:
+    _default_origins = "http://localhost:4321,http://localhost:3000,http://localhost:8080"
+
+ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", _default_origins).split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=ALLOWED_ORIGINS or ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -59,20 +81,15 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": "Internal server error"},
     )
 
-# Middleware for request logging
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    start_time = time.time()
-    response = await call_next(request)
-    process_time = time.time() - start_time
-    logger.info(f"{request.method} {request.url.path} - {response.status_code} - {process_time:.4f}s")
-    return response
-
-# Startup event
-@app.on_event("startup")
-async def startup_event():
-    logger.info("Starting up SwasthaTrack API...")
-    create_tables()
+# Middleware for request logging (verbose in dev, minimal in prod — gunicorn logs access in prod)
+if not IS_PRODUCTION:
+    @app.middleware("http")
+    async def log_requests(request: Request, call_next):
+        start_time = time.time()
+        response = await call_next(request)
+        process_time = time.time() - start_time
+        logger.info(f"{request.method} {request.url.path} - {response.status_code} - {process_time:.4f}s")
+        return response
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])

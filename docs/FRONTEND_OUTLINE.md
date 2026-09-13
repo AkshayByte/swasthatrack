@@ -1,7 +1,7 @@
 # SwasthaTrack Frontend Architecture Outline
 
 ## Platform Overview
-**SwasthaTrack Frontend** is an ultra-fast, multi-page healthcare application built on **Astro** with **React Islands**, **Tailwind CSS**, and **TypeScript**, aligned with the Ayushman Bharat Digital Mission (ABDM).
+**SwasthaTrack Frontend** is an ultra-fast, multi-page healthcare application built on **Astro** with **React Islands**, **Tailwind CSS**, and **TypeScript**, engineered for modern clinical workflows.
 
 ## Architecture Highlights
 - **Framework**: Astro (MPA Architecture) + React 18 (Client Islands)
@@ -22,7 +22,8 @@ frontend-v2/
 │   │       ├── PharmacyDashboard.tsx     # Real-time dispensing & stock tracking
 │   │       ├── LabDashboard.tsx          # Test processing & PDF uploads
 │   │       ├── AdminDashboard.tsx        # Facility analytics & system logs
-│   │       └── UnifiedDashboard.tsx      # Comprehensive management console
+│   │       ├── UnifiedDashboard.tsx      # Comprehensive management console
+│   │       └── InteractiveClinicalSimulator.tsx # Live AI triage & order simulator
 │   ├── layouts/
 │   │   └── Layout.astro    # Universal layout, dark mode, meta tags & navigation
 │   ├── lib/
@@ -34,7 +35,7 @@ frontend-v2/
 │   │   ├── index.astro     # High-performance SEO landing page
 │   │   ├── about.astro     # Platform mission & hospital workflows
 │   │   ├── contact.astro   # Support & inquiries
-│   │   ├── privacy.astro   # Health data privacy & ABDM compliance
+│   │   ├── privacy.astro   # Health data privacy & clinical compliance
 │   │   └── terms.astro     # Terms of service
 │   └── styles/
 │       └── global.css      # CSS design tokens & glassmorphism utilities

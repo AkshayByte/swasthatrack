@@ -74,7 +74,7 @@ export const CLINICAL_STAFF_PROFILES: Record<ClinicalRole, RoleProfile> = {
     departmentKey: 'registration',
     avatarInitials: 'PD',
     allowedDepartments: ['registration'],
-    description: 'Patient check-in, ABHA identity verification, and real-time AI emergency triage queue routing.'
+    description: 'Patient check-in, electronic medical record lookup, and real-time AI emergency triage queue routing.'
   },
   admin: {
     role: 'admin',
@@ -156,6 +156,8 @@ export async function loginWithCredentials(email: string, password: string): Pro
     (r) => CLINICAL_STAFF_PROFILES[r].email.toLowerCase() === email.toLowerCase().trim()
   );
 
+  let backendOffline = false;
+
   try {
     const response = await apiClient.post('/auth/login', { email, password });
     if (response.data && response.data.access_token) {
@@ -179,18 +181,29 @@ export async function loginWithCredentials(email: string, password: string): Pro
       notifyListeners(user);
       return user;
     }
-  } catch (e) {
-    console.warn('Backend login fallback to verified local profile', e);
+  } catch (e: any) {
+    // If the backend responded with a 4xx error (e.g. 401 wrong password),
+    // do NOT silently fall through — surface the error to the caller.
+    if (e?.response && e.response.status >= 400 && e.response.status < 500) {
+      throw new Error(e.response.data?.detail || 'Invalid credentials. Please check your email and password.');
+    }
+    // Backend is offline (network error, 5xx, timeout) — allow demo fallback below.
+    backendOffline = true;
+    console.warn('Backend unreachable — activating offline demo mode', e);
   }
 
-  // If offline/demo mode and credentials provided
-  if (matchedRole) {
+  // Offline demo fallback: only proceed if the email matches a known clinical profile.
+  // This prevents random emails from silently gaining access.
+  if (backendOffline && matchedRole) {
     return quickLoginAsRole(matchedRole);
   }
 
-  // Generic fallback if email is entered
-  const fallbackRole: ClinicalRole = email.includes('admin') ? 'admin' : email.includes('pharm') ? 'pharmacist' : email.includes('lab') ? 'lab' : email.includes('recept') ? 'registration' : 'doctor';
-  return quickLoginAsRole(fallbackRole);
+  // Backend is offline and email doesn't match any clinical profile — deny access.
+  if (backendOffline) {
+    throw new Error('Backend is unreachable and the provided email does not match a known demo profile.');
+  }
+
+  throw new Error('Login failed. Please try again.');
 }
 
 export function logout(): void {

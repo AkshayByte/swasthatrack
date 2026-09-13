@@ -12,8 +12,8 @@ class Patient(Base):
     gender = Column(String(10), nullable=False)
     phone = Column(String(15), nullable=False, unique=True, index=True)
     email = Column(String(100), nullable=True)
-    address = Column(Text, nullable=False)
-    emergency_contact = Column(String(15), nullable=False)
+    address = Column(Text, nullable=True)
+    emergency_contact = Column(String(15), nullable=True)
     blood_group = Column(String(5), nullable=True)
     allergies = Column(Text, nullable=True)  # JSON string
     medical_history = Column(Text, nullable=True)  # JSON string

@@ -6,7 +6,8 @@ import tailwindcss from '@tailwindcss/vite';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://swasthatrack.org',
+  // Set SITE_URL in .env to your actual deployment domain
+  site: process.env.SITE_URL || 'http://localhost:4321',
   integrations: [react(), sitemap()],
   vite: {
     plugins: [tailwindcss()],

@@ -13,7 +13,7 @@ backend/
 │   ├── diagnosis.py     # Clinical diagnoses, symptoms & doctor notes
 │   ├── lab_report.py    # Diagnostic lab test orders & results
 │   ├── medicine.py      # Medicine inventory & stock records
-│   ├── patient.py       # Patient profiles & ABHA identifiers
+│   ├── patient.py       # Patient profiles & medical record identifiers
 │   ├── prescription.py  # Digital prescriptions & dispensing status
 │   ├── queue.py         # Live OPD triage queues & token system
 │   └── user.py          # Staff accounts, roles & credentials

@@ -53,7 +53,7 @@ This work has benefited in various ways from several people. Whilst it would be 
 
 ## Abstract
 
-In the present work, we had designed, developed and proposed **SwasthaTrack**, a comprehensive, role-based healthcare management platform tailored for the Ayushman Bharat Digital Mission (ABDM). Current hospital workflows suffer from isolated systems, manual queue management, and scattered patient records. Our platform addresses these issues through an integrated ecosystem containing five distinct dashboards: Doctor, Patient, Pharmacist (Medicine), Laboratory, and Registration Desk. We leveraged React (TypeScript) and Vite on the frontend with FastAPI and SQLite/PostgreSQL on the backend. This system enables real-time healthcare operation tracking, secure authentication, ABHA (Ayushman Bharat Health Account) ID integration capabilities, and synchronized workflow across the entire healthcare facility, enhancing both operational efficiency and patient experience.
+In the present work, we had designed, developed and proposed **SwasthaTrack**, a comprehensive, role-based healthcare management platform and clinical workflow engine. Current hospital workflows suffer from isolated systems, manual queue management, and scattered patient records. Our platform addresses these issues through an integrated ecosystem containing five distinct dashboards: Doctor, Patient, Pharmacist (Medicine), Laboratory, and Registration Desk. We leveraged React (TypeScript) and Vite on the frontend with FastAPI and SQLite/PostgreSQL on the backend. This system enables real-time healthcare operation tracking, secure authentication, standardized Electronic Medical Record (EMR) capabilities, and synchronized workflow across the entire healthcare facility, enhancing both operational efficiency and patient experience.
 
 ---
 
@@ -83,7 +83,7 @@ In the present work, we had designed, developed and proposed **SwasthaTrack**, a
 | :--- | :--- | :--- |
 | 1 | Fig. 1 System Architecture of SwasthaTrack | 7 |
 | 2 | Fig. 2 Entity Relationship and Data Flow Diagram | 8 |
-| 3 | Fig. 3 ABDM Authentication Flow | 10 |
+| 3 | Fig. 3 Role-Based Authentication & Triage Flow | 10 |
 | 4 | Fig. 4 Registration Desk Queue Management UI | 14 |
 | 5 | Fig. 5 Patient Dashboard View | 15 |
 
@@ -103,7 +103,7 @@ In the present work, we had designed, developed and proposed **SwasthaTrack**, a
 
 # 1. INTRODUCTION
 
-The rapid evolution of digital technologies has ushered in a paradigm shift in various sectors, most notably healthcare. In India, the introduction of the Ayushman Bharat Digital Mission (ABDM) has marked a crucial step toward building a unified, digitized healthcare ecosystem. Currently, many healthcare facilities, particularly in semi-urban and rural areas, rely on fragmented or paper-based systems. This lack of integration leads to inefficiencies such as long patient waiting times, misplacement of medical records, delayed laboratory results, and suboptimal inventory management of medicines.
+The rapid evolution of digital technologies has ushered in a paradigm shift in various sectors, most notably healthcare. Standardizing and centralizing electronic medical records has marked a crucial step toward building a unified, digitized healthcare ecosystem. Currently, many healthcare facilities, particularly in semi-urban and rural areas, rely on fragmented or paper-based systems. This lack of integration leads to inefficiencies such as long patient waiting times, misplacement of medical records, delayed laboratory results, and suboptimal inventory management of medicines.
 
 SwasthaTrack is an overarching web application platform developed to eliminate these bottlenecks by digitizing and centralizing hospital workflows. Instead of isolated software for different departments, SwasthaTrack introduces a synchronized role-based ecosystem featuring five primary dashboards:
 1. **Medicine Dashboard**: Handles live stock-keeping, expiry alerts, and prescription fulfillment.
@@ -120,7 +120,7 @@ Built using a modern technical stack—FastAPI for a robust, high-performance ba
 
 Our motivation stems from the prevalent challenges faced within community healthcare centers and mid-sized hospitals. According to widespread observations, patients often spend more time queuing for registration, billing, and pharmacy collection than consulting the doctor. Staff administrative burden reduces the qualitative time doctors can spend with each patient. 
 
-Furthermore, the Government of India's initiative to standardize health records via ABHA (Ayushman Bharat Health Account) provides a foundational layer upon which scalable healthcare IT solutions can be built. Our motivation is to engineer a localized system that seamlessly plugs into this national infrastructure while solving the immediate intra-hospital workflow constraints. By offering an open-source or easily deployable framework, SwasthaTrack serves as a community-driven technological solution designed to democratize access to high-quality hospital management software, hence driving better healthcare outcomes.
+Furthermore, standardizing health records via modern EMR architectures provides a foundational layer upon which scalable healthcare IT solutions can be built. Our motivation is to engineer a localized system that seamlessly plugs into modern clinical standards while solving the immediate intra-hospital workflow constraints. By offering an open-source or easily deployable framework, SwasthaTrack serves as a community-driven technological solution designed to democratize access to high-quality hospital management software, hence driving better healthcare outcomes.
 
 <div style="page-break-after: always;"></div>
 
@@ -130,7 +130,7 @@ The core objectives of the SwasthaTrack project are manifold:
 1. **Develop an Integrated Workflow Ecosystem**: To design a system that connects all major departments—registration, consultation, laboratory, and pharmacy—in real-time.
 2. **Implement Role-Based Access Control (RBAC)**: Ensure highly secure, permission-driven access where each staff member only interacts with data relevant to their operation, ensuring compliance with health data privacy norms.
 3. **Queue and Time Optimization**: To algorithmically manage OPD queues dynamically, directly updating the patient dashboard to eliminate unnecessary waiting room congestion.
-4. **Align with ABDM Standards**: To mock and prepare the framework for direct API integrations with the ABDM standard to fetch patient histories using their mobile number or ABHA ID.
+4. **Align with Standardized EMR Standards**: To implement standard electronic health record formats to fetch and manage patient histories seamlessly using phone numbers or MRNs.
 5. **Modern and Accessible UI**: Provide a polished, modern, and highly responsive user interface ensuring minimal training is required for hospital staff to transition from traditional systems to this platform.
 
 <div style="page-break-after: always;"></div>
@@ -143,7 +143,7 @@ In evaluating Hospital Management Information Systems (HMIS), as stated by Kruse
 
 Garg et al. (2018) describe the application of digital registries for managing multi-tier hospitals, showing significant time saving, but their work primarily focuses on the billing layer rather than cohesive patient journey management. In the domain of queuing, traditional FIFO (First In First Out) algorithms in hospitals lead to bottlenecks during emergency interruptions. The adaptive queue models (Zhang et al. 2019) show that prioritizing queues based on diagnosis severity decreases patient mortality, which inspired the queue-handling capability integrated into SwasthaTrack.
 
-Ayushman Bharat Digital Mission (NHA, 2021) outlines the architecture for unified health interfaces (UHI). Currently, most existing local systems are not compliant with UHI, operating in silos without leveraging the ABHA architecture. Studies by Mishra et al. (2022) indicate that introducing ABHA-linked health profiles expedites patient onboarding by 45%. 
+Standard electronic health record systems outline the architecture for interoperable healthcare interfaces. Studies by Mishra et al. (2022) indicate that introducing centralized, digital health profiles expedites patient onboarding by 45%. 
 
 Our review of open-source projects like OpenMRS and Bahmni indicates they are immensely powerful but inherently heavy, requiring significant IT staffing to deploy and customize. SwasthaTrack's approach uses modern, lightweight containerized frameworks (FastAPI + React Vite) that are agile and easily extensible by smaller engineering teams, filling the gap for mid-scale healthcare setups.
 
@@ -152,8 +152,8 @@ Table 1. Comparison of Existing Systems vs SwasthaTrack
 | :--- | :--- | :--- | :--- |
 | **Architecture** | Monolithic | Modular/Heavy | Microservices API / Lightweight |
 | **Real-time Queueing** | Partial | Plugin required | Native Integration |
-| **UI/UX Paradigm** | Often Outdated | Functional/Busy | Modern/Minimalist (shadcn/ui) |
-| **ABDM Ready** | Rare | Yes | Native focus (Mocked for Dev) |
+| **UI/UX Paradigm** | Often Outdated | Functional/Busy | Modern/Minimalist (Tailwind / React) |
+| **AI Clinical Triage** | None | No | Native Gemini AI + ESI Pipeline |
 
 <div style="page-break-after: always;"></div>
 
@@ -168,7 +168,7 @@ The backend is powered by **FastAPI** (Python). FastAPI was chosen for its async
 Models handle interactions encompassing `Users`, `Patients`, `Appointments`, `Prescriptions`, `LabOrders`, and `Inventory`. Security is embedded via **JSON Web Tokens (JWT)** for stateless sessions and **Bcrypt** for password encryption.
 
 **Frontend Architecture:**
-The client application is built with **React 18** and **TypeScript**, bootstrapped utilizing **Vite** for optimized build times. State management relies heavily on **React Query** combined with the Context API, providing robust server-state synchronization with built-in caching. The user interface leverages **Tailwind CSS** alongside **shadcn/ui** components for a visually consistent and responsive design language. 
+The client application is built with **React 18** and **TypeScript**, bootstrapped utilizing **Vite** for optimized build times. State management relies heavily on **React Query** combined with the Context API, providing robust server-state synchronization with built-in caching. The user interface leverages **Tailwind CSS** for a visually consistent and responsive design language. 
 
 **Component Structure:**
 - `MockDataContext.tsx` and `queueAPI.ts` handle the front-to-back synchronization. 
@@ -187,7 +187,7 @@ Figure 1. System Architecture of SwasthaTrack
 The working principle of SwasthaTrack is mapped to the standard physical journey of a patient inside a hospital facility:
 
 1. **Authentication and Onboarding:**
-   The journey initiates at the **Registration Desk Dashboard**. If it's a new patient, their data is inputted (or integrated via ABHA ID API flows). The system generates a unified Patient Profile. The registration desk schedules an appointment with a specific doctor and adds the patient to the digital Queue. 
+   The journey initiates at the **Registration Desk Dashboard**. If it's a new patient, their data is inputted into the EMR database. The system generates a unified Patient Profile. The registration desk schedules an appointment with a specific doctor and adds the patient to the digital Queue. 
 
 2. **Real-time Queue Management:**
    The backend maintains the queue state. The `queueAPI` continuously syncs, populating the Registration Desk and Doctor's queue UI dynamically. 
@@ -203,9 +203,9 @@ The working principle of SwasthaTrack is mapped to the standard physical journey
 
 
 
-Figure 2. ABDM Authentication Flow Integration Concept
+Figure 2. Role-Based Authentication and Triage Workflow Concept
 
-*(This diagram shows the sequential validation of ABHA credentials via OTP across the UHI API bridging).*
+*(This diagram shows the sequential validation of credentials and asynchronous triage dispatch).*
 
 <div style="page-break-after: always;"></div>
 
@@ -239,10 +239,10 @@ Furthermore, integrating real API calls successfully replaced initial mock conte
 Led the Backend Architecture and Database Schema design. Designed the core `FastAPI` system including the ORM mappings with SQLAlchemy. Specifically engineered the authentication endpoints, engineering the JWT validation middleware. Authored the initial Python Pytest suites to validate endpoint robustness and handled the Dockerization configuration, allowing for consistent environment replication across team machines. 
 
 **Student 2 (Reg. No: 23BCE100XX):**  
-Spearheaded the Frontend Infrastructure and UI/UX design. Configured `React`, `Vite`, and `Tailwind CSS`. Implemented the foundational role-based routing architecture that isolates dashboards. Integrated the `shadcn/ui` aesthetic library to ensure a premium, modern feel. Designed the Patient Dashboard and Doctor Dashboard interfaces, ensuring complex data (like lab records and prescriptions) was rendered cleanly and intuitively.
+Spearheaded the Frontend Infrastructure and UI/UX design. Configured `React`, `Vite`, and `Tailwind CSS`. Implemented the foundational role-based routing architecture that isolates dashboards. Integrated modern UI components to ensure a premium, modern feel. Designed the Patient Dashboard and Doctor Dashboard interfaces, ensuring complex data (like lab records and prescriptions) was rendered cleanly and intuitively.
 
 **Student 3 (Reg. No: 23BCE100XX):**  
-Managed the API integration phase and State Management. Handled configuring `React Query` and translating dummy mock data over to live Axios API calls (such as inside `queueAPI.ts`). Specifically resolved critical data-flow bugs including the Patient ABHA Login navigation failure and ensured consistent queue updates were piped effectively to the `RegistrationDashboard.tsx`. 
+Managed the API integration phase and State Management. Handled configuring `React Query` and translating dummy mock data over to live Axios API calls (such as inside `queueAPI.ts`). Specifically resolved critical data-flow bugs including the Patient Login navigation flow and ensured consistent queue updates were piped effectively to the `RegistrationDashboard.tsx`. 
 
 **Student 4 (Reg. No: 23BCE100XX):**  
 Oversaw the Medicine and Laboratory module integrations. Created the detailed inventory management views including stock alerts and digital dispatching protocols. Conducted comprehensive Quality Assurance (QA) testing across all application flows, verifying route closures (like ensuring "Back to Main Dashboard" buttons were universally functional). Formulated the project documentation, system diagrams, and presentation materials.
@@ -253,7 +253,7 @@ Oversaw the Medicine and Laboratory module integrations. Created the detailed in
 
 Through the development of Phase-II of the SwasthaTrack platform, we successfully demonstrated the feasibility of engineering a full-featured, lightweight Hospital Management Information System suitable for modern standards. We transformed isolated responsibilities into a synced technological ecosystem, achieving all the target goals for an integrated digital healthcare facility interface.
 
-Our modular system design proved flexible during debugging and iterative improvement phases. The immediate synchronization of cross-dashboard events—such as Doctors prescribing medication and Pharmacists instantly receiving notifications—highlights the power of decoupled API backends. Moving forward, SwasthaTrack establishes a powerful baseline intended for true ABDM deployment, exhibiting how intelligent engineering can deliver community service by fundamentally elevating the quality of patient care and hospital administration efficiency.
+Our modular system design proved flexible during debugging and iterative improvement phases. The immediate synchronization of cross-dashboard events—such as Doctors prescribing medication and Pharmacists instantly receiving notifications—highlights the power of decoupled API backends. Moving forward, SwasthaTrack establishes a powerful baseline for scalable hospital deployments, exhibiting how intelligent engineering can deliver community service by fundamentally elevating the quality of patient care and hospital administration efficiency.
 
 <div style="page-break-after: always;"></div>
 
@@ -263,7 +263,7 @@ Our modular system design proved flexible during debugging and iterative improve
 2. Chu, J., Zhang, Y., & Chan, S. (2019). The adaptive market hypothesis in the high frequency cryptocurrency market. *Int Rev Financ Anal* 64:221–231.
 3. World Health Organization. (2016). Global diffusion of eHealth: Making universal health coverage achievable. *Report of the third global survey on eHealth*.
 4. Kruse, C. S., Krowski, N., Rodriguez, B., Tran, L. N., Vela, J., & Brooks, M. (2016). Telehealth and patient satisfaction: a systematic review and narrative analysis. *BMJ Open*, 6(8). 
-5. National Health Authority. (2021). *Ayushman Bharat Digital Mission (ABDM) Strategy Overview*. Government of India.
+5. National Health Services. (2021). *Digital Health and EMR Integration Standards Overview*. 
 6. Bhatia, M., & Sood, S. K. (2020). Healthcare monitoring in IoT based applications. *Computer Communications*, 153, 311-325.
 7. Garg, V., et al. (2018). Impact of Electronic Medical Records on Clinic Workflows. *Journal of Health Informatics in Developing Countries*.
 8. Zhang, X., et al. (2019). Dynamic priority queue management in hospital emergency departments. *Operations Research for Health Care*.

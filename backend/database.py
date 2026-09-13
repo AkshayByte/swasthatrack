@@ -8,11 +8,24 @@ load_dotenv()
 # Database URL
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./swasthatrack.db")
 
-# Create engine
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
-)
+# SQLAlchemy requires postgresql:// instead of postgres:// (common in Render / Heroku URLs)
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# Create engine with connection pool resilience
+if "sqlite" in DATABASE_URL:
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False}
+    )
+else:
+    engine = create_engine(
+        DATABASE_URL,
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True,  # Automatically reconnect dropped cloud database connections
+        pool_recycle=300
+    )
 
 # Create session
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

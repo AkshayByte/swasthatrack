@@ -35,13 +35,13 @@ def get_medicine_dashboard(
         Medicine.expiry_date >= datetime.now(timezone.utc).date()
     ).scalar()
     
-    # Recent activities (mock for now as we don't have an activity log table yet)
+    # Recent medicines updated (last 3 by name as a lightweight activity feed)
+    recent_medicines_query = db.query(Medicine).order_by(desc(Medicine.id)).limit(3).all()
     recent_activities = [
-        {"action": "Stock Update", "item": "Paracetamol", "time": "2 hours ago"},
-        {"action": "New Medicine", "item": "Amoxicillin", "time": "5 hours ago"},
-        {"action": "Low Stock Alert", "item": "Ibuprofen", "time": "1 day ago"},
+        {"action": "Medicine Record", "item": m.name, "stock": m.current_stock}
+        for m in recent_medicines_query
     ]
-    
+
     return {
         "total_medicines": total_medicines,
         "low_stock_items": low_stock,
@@ -103,22 +103,27 @@ def get_patient_dashboard(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role not in ["admin", "patient"]:
+    # "patient" is not a valid staff role — this endpoint is admin-accessible
+    # for aggregate reporting. A dedicated patient portal auth flow should be
+    # built separately if self-service patient access is needed.
+    if current_user.role not in ["admin", "doctor"]:
         raise HTTPException(status_code=403, detail="Not authorized")
-        
-    # In a real app, we would filter by the logged-in patient's ID
-    # For now, we'll return stats for a "demo" patient or aggregate
-    
+
     active_prescriptions = db.query(func.count(Prescription.id)).filter(Prescription.status == "active").scalar()
     upcoming_appointments = db.query(func.count(Appointment.id)).filter(Appointment.status == "scheduled").scalar()
     pending_lab_reports = db.query(func.count(LabReport.id)).filter(LabReport.status == "pending").scalar()
-    
+
+    # Build recent history from actual DB records
+    recent_appointments = db.query(Appointment).order_by(desc(Appointment.appointment_date)).limit(3).all()
     recent_history = [
-        {"type": "Appointment", "date": "2023-11-15", "details": "General Checkup"},
-        {"type": "Lab Test", "date": "2023-11-10", "details": "Blood Test"},
-        {"type": "Prescription", "date": "2023-11-15", "details": "Antibiotics"},
+        {
+            "type": "Appointment",
+            "date": appt.appointment_date.strftime("%Y-%m-%d") if appt.appointment_date else "",
+            "details": appt.status
+        }
+        for appt in recent_appointments
     ]
-    
+
     return {
         "active_prescriptions": active_prescriptions,
         "upcoming_appointments": upcoming_appointments,

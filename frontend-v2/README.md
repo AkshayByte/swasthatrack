@@ -33,7 +33,7 @@ frontend-v2/
 │   │   ├── index.astro     # Landing page with SEO & JSON-LD schema
 │   │   ├── about.astro     # Platform mission & hospital workflows
 │   │   ├── contact.astro   # Support & inquiries
-│   │   ├── privacy.astro   # Health data privacy & ABDM guidelines
+│   │   ├── privacy.astro   # Health data privacy & security standards
 │   │   └── terms.astro     # Terms of service
 │   └── styles/
 │       └── global.css      # Design tokens, color palette & utilities

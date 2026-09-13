@@ -3,93 +3,219 @@ import Layout from '../layouts/Layout.astro';
 ---
 
 <Layout
-  title="Contact & Support - SwasthaTrack"
-  description="Get in touch with SwasthaTrack for hospital onboarding, patient support, and ABDM clinical inquiries."
+  title="Contact & Support — SwasthaTrack"
+  description="Get in touch with SwasthaTrack for hospital onboarding, technical support, or general enquiries."
 >
-  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-    <div class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#11192e] p-8 sm:p-12 shadow-sm space-y-8">
-      
-      <div class="border-b border-slate-100 dark:border-slate-800 pb-6 text-center max-w-xl mx-auto">
-        <span class="text-xs font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">Hospital & Patient Care Support</span>
-        <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white mt-1">Get in Touch with SwasthaTrack</h1>
-        <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-2">
-          Connect with our clinical operations team for hospital deployments, emergency triage setup, or patient assistance.
-        </p>
-      </div>
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <!-- Contact Information Cards -->
-        <div class="space-y-4">
-          <div class="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-1">
-            <h3 class="font-bold text-sm text-slate-900 dark:text-white">Hospital Onboarding & Partnership</h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400">Deploy SwasthaTrack in your clinic, PHC, or multi-specialty hospital.</p>
-            <div class="pt-2 text-xs font-semibold text-cyan-600 dark:text-cyan-400">onboarding@swasthatrack.org</div>
-          </div>
+    <!-- Page header -->
+    <div class="text-center mb-14">
+      <span class="section-label mb-3 block">Contact</span>
+      <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+        Get in touch
+      </h1>
+      <p class="mt-4 text-slate-500 dark:text-slate-400 text-base max-w-lg mx-auto leading-relaxed">
+        Whether you're looking to deploy SwasthaTrack at your hospital, have a technical question, or just want to learn more — we're here.
+      </p>
+    </div>
 
-          <div class="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-1">
-            <h3 class="font-bold text-sm text-slate-900 dark:text-white">24/7 Clinical & Patient Helpdesk</h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400">Immediate assistance for doctors, pharmacists, and patient inquiries.</p>
-            <div class="pt-2 text-xs font-semibold text-cyan-600 dark:text-cyan-400">care@swasthatrack.org • 1800-11-4477</div>
-          </div>
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-10 items-start">
 
-          <div class="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-1">
-            <h3 class="font-bold text-sm text-slate-900 dark:text-white">ABDM Compliance & Security</h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400">Inquiries regarding ABHA integration and consent-based health data privacy.</p>
-            <div class="pt-2 text-xs font-semibold text-cyan-600 dark:text-cyan-400">privacy@swasthatrack.org</div>
+      <!-- ─── Contact info cards ─── -->
+      <div class="lg:col-span-2 space-y-4">
+
+        {[
+          {
+            icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>`,
+            title: 'Hospital onboarding',
+            contact: 'onboarding@swasthatrack.org',
+            desc: 'Deploy SwasthaTrack at your clinic, PHC, or multi-specialty hospital.',
+          },
+          {
+            icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>`,
+            title: 'Technical support',
+            contact: 'care@swasthatrack.org',
+            desc: 'Help with setup, configuration, or bugs. We respond within 24 hours.',
+          },
+          {
+            icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>`,
+            title: 'Privacy & compliance',
+            contact: 'privacy@swasthatrack.org',
+            desc: 'Questions about patient data handling, FHIR compliance, or security audits.',
+          },
+        ].map(item => (
+          <div class="flex items-start gap-4 p-5 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+            <div class="w-9 h-9 rounded-lg bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0" set:html={item.icon} />
+            <div>
+              <div class="font-semibold text-slate-900 dark:text-white text-sm">{item.title}</div>
+              <div class="text-xs font-medium text-sky-600 dark:text-sky-400 mt-0.5 mb-1.5">{item.contact}</div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{item.desc}</p>
+            </div>
           </div>
+        ))}
+
+        <!-- Response time note -->
+        <div class="flex items-center gap-2 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-xs text-emerald-700 dark:text-emerald-400 font-medium">
+          <span class="status-dot"></span>
+          Typical response time: under 24 hours
         </div>
 
-        <!-- Interactive Contact Form -->
-        <form class="space-y-4" onsubmit="event.preventDefault(); alert('Thank you! Your message has been received by our clinical support team.');">
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Your Full Name *</label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Dr. Rajesh Sharma / Clinic Manager"
-              class="w-full px-3.5 py-2.5 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-cyan-500 focus:outline-none"
-            />
+      </div>
+
+      <!-- ─── Contact form ─── -->
+      <div class="lg:col-span-3">
+        <div class="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-8">
+
+          <div id="form-success" class="hidden flex-col items-center text-center gap-4 py-8">
+            <div class="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
+              <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-900 dark:text-white text-lg">Message sent!</h3>
+              <p class="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-sm">
+                We've received your inquiry and will get back to you within 24 hours.
+              </p>
+            </div>
+            <button
+              id="reset-form-btn"
+              class="text-sm font-medium text-sky-600 dark:text-sky-400 hover:underline underline-offset-4"
+            >
+              Send another message
+            </button>
           </div>
 
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Email Address *</label>
-            <input
-              type="email"
-              required
-              placeholder="contact@hospital.org"
-              class="w-full px-3.5 py-2.5 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-cyan-500 focus:outline-none"
-            />
-          </div>
+          <form id="contact-form" class="space-y-5" novalidate>
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-6">Send us a message</h2>
 
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Facility Type / Subject</label>
-            <select class="w-full px-3.5 py-2.5 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-cyan-500 focus:outline-none">
-              <option>Hospital OPD Deployment</option>
-              <option>Primary Health Center (PHC) Onboarding</option>
-              <option>AI Triage Consultation</option>
-              <option>Patient Support Request</option>
-            </select>
-          </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label for="cf-name" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Full name <span class="text-rose-500">*</span></label>
+                <input
+                  id="cf-name"
+                  type="text"
+                  name="name"
+                  required
+                  autocomplete="name"
+                  placeholder="Dr. Anil Mehta"
+                  class="input-field"
+                />
+              </div>
+              <div>
+                <label for="cf-email" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Email address <span class="text-rose-500">*</span></label>
+                <input
+                  id="cf-email"
+                  type="email"
+                  name="email"
+                  required
+                  autocomplete="email"
+                  placeholder="admin@hospital.org"
+                  class="input-field"
+                />
+              </div>
+            </div>
 
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Message *</label>
-            <textarea
-              rows="4"
-              required
-              placeholder="Tell us about your healthcare facility or inquiry..."
-              class="w-full px-3.5 py-2.5 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-cyan-500 focus:outline-none"
-            ></textarea>
-          </div>
+            <div>
+              <label for="cf-org" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Organisation / Hospital name</label>
+              <input
+                id="cf-org"
+                type="text"
+                name="organisation"
+                autocomplete="organization"
+                placeholder="City General Hospital, Mumbai"
+                class="input-field"
+              />
+            </div>
 
-          <button
-            type="submit"
-            class="w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 shadow-md transition-all cursor-pointer"
-          >
-            Submit Inquiry
-          </button>
-        </form>
+            <div>
+              <label for="cf-subject" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Topic</label>
+              <select id="cf-subject" name="subject" class="input-field">
+                <option value="onboarding">Hospital / clinic onboarding</option>
+                <option value="technical">Technical support</option>
+                <option value="demo">Request a guided demo</option>
+                <option value="privacy">Privacy & compliance</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="cf-message" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Message <span class="text-rose-500">*</span></label>
+              <textarea
+                id="cf-message"
+                name="message"
+                rows="5"
+                required
+                placeholder="Tell us about your facility or what you need help with..."
+                class="input-field resize-none"
+              ></textarea>
+            </div>
+
+            <!-- Error message -->
+            <div id="form-error" class="hidden text-xs text-rose-600 dark:text-rose-400 font-medium">
+              Please fill in all required fields before submitting.
+            </div>
+
+            <button
+              type="submit"
+              id="submit-btn"
+              class="w-full py-3 px-5 rounded-xl text-sm font-semibold text-white bg-sky-600 hover:bg-sky-700 active:bg-sky-800 transition-colors shadow-sm flex items-center justify-center gap-2"
+            >
+              <span id="submit-text">Send message</span>
+              <svg id="submit-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+              <svg id="submit-spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            </button>
+          </form>
+
+        </div>
       </div>
 
     </div>
   </div>
 </Layout>
+
+<script>
+  const form = document.getElementById('contact-form') as HTMLFormElement;
+  const successBox = document.getElementById('form-success')!;
+  const errorMsg = document.getElementById('form-error')!;
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+  const submitText = document.getElementById('submit-text')!;
+  const submitIcon = document.getElementById('submit-icon')!;
+  const submitSpinner = document.getElementById('submit-spinner')!;
+  const resetBtn = document.getElementById('reset-form-btn')!;
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const name    = (form.querySelector('#cf-name')    as HTMLInputElement).value.trim();
+    const email   = (form.querySelector('#cf-email')   as HTMLInputElement).value.trim();
+    const message = (form.querySelector('#cf-message') as HTMLTextAreaElement).value.trim();
+
+    if (!name || !email || !message) {
+      errorMsg.classList.remove('hidden');
+      return;
+    }
+    errorMsg.classList.add('hidden');
+
+    // Simulate sending (replace with real API call when backend endpoint exists)
+    submitText.textContent = 'Sending…';
+    submitIcon.classList.add('hidden');
+    submitSpinner.classList.remove('hidden');
+    submitBtn.disabled = true;
+
+    await new Promise(r => setTimeout(r, 1200));
+
+    form.classList.add('hidden');
+    successBox.classList.remove('hidden');
+    successBox.classList.add('flex');
+  });
+
+  resetBtn?.addEventListener('click', () => {
+    form.reset();
+    form.classList.remove('hidden');
+    successBox.classList.add('hidden');
+    successBox.classList.remove('flex');
+    submitText.textContent = 'Send message';
+    submitIcon.classList.remove('hidden');
+    submitSpinner.classList.add('hidden');
+    submitBtn.disabled = false;
+  });
+</script>

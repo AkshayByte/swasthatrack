@@ -1,7 +1,7 @@
 # SwasthaTrack Design System Specification
 
 ## 🎨 Overview & Brand Identity
-**SwasthaTrack** is a mission-critical, AI-powered healthcare management and ABDM-compliant hospital operations platform. The design system emphasizes clarity, trust, clinical precision, and modern accessibility across light and dark modes.
+**SwasthaTrack** is a mission-critical, AI-powered healthcare management and hospital clinical workflow engine. The design system emphasizes clarity, trust, clinical precision, and modern accessibility across light and dark modes.
 
 ---
 

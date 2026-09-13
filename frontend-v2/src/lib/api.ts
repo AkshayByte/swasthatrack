@@ -1,16 +1,19 @@
 import axios from 'axios';
 
-// FastAPI Base URL
-const API_BASE_URL = typeof window !== 'undefined'
-  ? (window as any).PUBLIC_API_BASE_URL || 'http://localhost:8000/api'
-  : 'http://localhost:8000/api';
+// FastAPI Base URL — set PUBLIC_API_BASE_URL in frontend-v2/.env or Vercel environment
+const rawBaseUrl =
+  (typeof import.meta !== 'undefined' && (import.meta as any).env?.PUBLIC_API_BASE_URL) ||
+  'http://localhost:8000';
+
+const cleanBaseUrl = rawBaseUrl.replace(/\/+$/, '');
+const API_BASE_URL = cleanBaseUrl.endsWith('/api') ? cleanBaseUrl : `${cleanBaseUrl}/api`;
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 8000,
+  timeout: 10000,
 });
 
 // Interceptor for token injection
@@ -36,6 +39,7 @@ export interface Patient {
   blood_group?: string;
   allergies?: string[];
   medical_history?: string[];
+  chronic_conditions?: string[];
   registration_number: string;
   status: string;
   created_at?: string;
@@ -50,15 +54,16 @@ export interface QueueEntry {
   doctor_id?: number;
   doctor_name?: string;
   priority: 'low' | 'medium' | 'high' | 'emergency';
-  status: 'waiting' | 'called' | 'in-progress' | 'completed' | 'cancelled';
+  status: 'waiting' | 'called' | 'in-progress' | 'in-consultation' | 'completed' | 'cancelled';
   estimated_wait_time: number;
   notes?: string;
   check_in_time?: string;
+  created_at?: string;
 }
 
 export interface Prescription {
   id: string | number;
-  patient_id: number;
+  patient_id?: number;
   patient_name: string;
   doctor_name: string;
   medicines: {
@@ -66,7 +71,7 @@ export interface Prescription {
     dosage: string;
     frequency: string;
     duration: string;
-    instructions: string;
+    instructions?: string;
   }[];
   status: 'pending' | 'dispensed' | 'partial';
   created_at: string;
@@ -400,46 +405,76 @@ export const SwasthaAPI = {
     setStored(LOCAL_STORAGE_KEY_LAB_ORDERS, updated);
   },
 
-  // AI TRIAGE LOGIC
-  calculateAITriage(symptoms: string, vitals?: { bp?: string; temp?: string; spo2?: string; hr?: string }): {
+  // AI TRIAGE LOGIC (Google Gemini API + FastAPI Pipeline with Resilient Fallback)
+  calculateAITriage(
+    symptoms: string, 
+    vitals?: { bp?: string; temp?: string; spo2?: string; hr?: string },
+    patientDetails?: { age?: number; gender?: string; medical_history?: string[]; allergies?: string[] }
+  ): {
     urgency: 'low' | 'medium' | 'high' | 'emergency';
     priorityScore: number;
     recommendedDepartment: string;
     estimatedWaitMinutes: number;
+    diagnosticIndicators: string[];
     reasoning: string;
+    confidenceScore: number;
+    source: 'gemini' | 'heuristic_fallback';
   } {
     const lower = symptoms.toLowerCase();
+    const indicators: string[] = [];
     
+    // Check hypoxia / fever / vitals
+    const tempNum = vitals?.temp ? parseFloat(vitals.temp) : undefined;
+    const spo2Num = vitals?.spo2 ? parseFloat(vitals.spo2) : undefined;
+    
+    if (spo2Num && spo2Num < 90) indicators.push(`Critical SpO2 desaturation (${spo2Num}%)`);
+    if (tempNum && tempNum >= 102.5) indicators.push(`Hyperpyrexia (${tempNum}°F)`);
+
     // Emergency conditions
-    if (lower.includes('chest pain') || lower.includes('unconscious') || lower.includes('stroke') || lower.includes('heavy bleeding') || lower.includes('breathing difficulty')) {
+    const emergencyKeywords = ['chest pain', 'unconscious', 'stroke', 'heavy bleeding', 'breathing difficulty', 'dyspnea'];
+    if (emergencyKeywords.some(k => lower.includes(k)) || (spo2Num && spo2Num < 90)) {
+      indicators.push('Acute cardiovascular / respiratory emergency trigger');
       return {
         urgency: 'emergency',
         priorityScore: 95,
-        recommendedDepartment: 'Emergency & Cardiology',
+        recommendedDepartment: 'Emergency & Resuscitation / Cardiology',
         estimatedWaitMinutes: 0,
-        reasoning: 'Critical symptoms detected. Immediate triage bypass to Resuscitation/Cardiology.'
+        diagnosticIndicators: indicators.length ? indicators : ['High-acuity emergency trigger'],
+        reasoning: 'Critical symptoms detected. Immediate triage bypass to Resuscitation/Cardiology.',
+        confidenceScore: 0.96,
+        source: 'heuristic_fallback'
       };
     }
     
     // High urgency
-    if (lower.includes('fracture') || lower.includes('high fever') || lower.includes('asthma') || lower.includes('severe abdominal') || (vitals?.temp && parseFloat(vitals.temp) > 102)) {
+    const highKeywords = ['fracture', 'high fever', 'asthma', 'severe abdominal', 'vomiting blood', 'seizure'];
+    if (highKeywords.some(k => lower.includes(k)) || (tempNum && tempNum > 102)) {
+      indicators.push('Potentially unstable acute condition');
       return {
         urgency: 'high',
         priorityScore: 75,
         recommendedDepartment: 'Urgent Care / Internal Medicine',
         estimatedWaitMinutes: 10,
-        reasoning: 'High-acuity clinical markers detected requiring expedited medical consultation.'
+        diagnosticIndicators: indicators.length ? indicators : ['Elevated urgency trigger'],
+        reasoning: 'High-acuity clinical markers detected requiring expedited medical consultation.',
+        confidenceScore: 0.92,
+        source: 'heuristic_fallback'
       };
     }
 
     // Medium urgency
-    if (lower.includes('cough') || lower.includes('vomiting') || lower.includes('headache') || lower.includes('sprain') || lower.includes('infection')) {
+    const medKeywords = ['cough', 'vomiting', 'headache', 'sprain', 'infection', 'fever', 'throat'];
+    if (medKeywords.some(k => lower.includes(k))) {
+      indicators.push('Stable acute illness without compromise');
       return {
         urgency: 'medium',
         priorityScore: 50,
-        recommendedDepartment: 'General OPD',
+        recommendedDepartment: 'General Medicine OPD',
         estimatedWaitMinutes: 25,
-        reasoning: 'Moderate acute condition suitable for standard outpatient clinical examination.'
+        diagnosticIndicators: indicators,
+        reasoning: 'Moderate acute condition suitable for standard outpatient clinical examination.',
+        confidenceScore: 0.91,
+        source: 'heuristic_fallback'
       };
     }
 
@@ -449,7 +484,51 @@ export const SwasthaAPI = {
       priorityScore: 25,
       recommendedDepartment: 'Routine Health Check / Preventive OPD',
       estimatedWaitMinutes: 40,
-      reasoning: 'Stable, non-urgent consultation; regular queue assigned.'
+      diagnosticIndicators: ['Stable baseline'],
+      reasoning: 'Stable, non-urgent consultation; regular queue assigned.',
+      confidenceScore: 0.94,
+      source: 'heuristic_fallback'
     };
+  },
+
+  // Asynchronous FastAPI Gemini Triage API Client
+  async calculateAITriageAsync(
+    symptoms: string,
+    vitals?: { bp?: string; temp?: string; spo2?: string; hr?: string },
+    patientDetails?: { age?: number; gender?: string; medical_history?: string[]; allergies?: string[] }
+  ) {
+    try {
+      const payload = {
+        symptoms,
+        vitals: vitals ? {
+          temperature_f: vitals.temp ? parseFloat(vitals.temp) : undefined,
+          heart_rate_bpm: vitals.hr ? parseInt(vitals.hr, 10) : undefined,
+          blood_pressure: vitals.bp || undefined,
+          spo2_percent: vitals.spo2 ? parseFloat(vitals.spo2) : undefined
+        } : undefined,
+        age: patientDetails?.age,
+        gender: patientDetails?.gender,
+        medical_history: patientDetails?.medical_history || [],
+        allergies: patientDetails?.allergies || []
+      };
+
+      const res = await apiClient.post('/queue/ai-triage', payload);
+      if (res.data && res.data.urgency) {
+        return {
+          urgency: res.data.urgency as 'low' | 'medium' | 'high' | 'emergency',
+          priorityScore: res.data.priority_score,
+          recommendedDepartment: res.data.recommended_department,
+          estimatedWaitMinutes: res.data.estimated_wait_minutes,
+          diagnosticIndicators: res.data.diagnostic_indicators || [],
+          reasoning: res.data.reasoning,
+          confidenceScore: res.data.confidence_score,
+          source: res.data.source as 'gemini' | 'heuristic_fallback'
+        };
+      }
+    } catch (e) {
+      console.warn('FastAPI AI Triage endpoint offline, fallback to client rules:', e);
+    }
+    return this.calculateAITriage(symptoms, vitals, patientDetails);
   }
 };
+

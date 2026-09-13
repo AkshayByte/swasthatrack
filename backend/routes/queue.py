@@ -5,10 +5,26 @@ from database import get_db
 from models.queue import QueueEntry as QueueEntryModel
 from models.user import User
 from routes.auth import get_current_user
-from schemas.queue import QueueEntry, QueueEntryCreate
+from schemas.queue import QueueEntry, QueueEntryCreate, TriageRequest, TriageResponse
+from utils.gemini_triage import analyze_clinical_triage
 from datetime import datetime, timezone
 
 router = APIRouter()
+
+@router.post("/ai-triage", response_model=TriageResponse)
+async def perform_ai_triage(
+    request: TriageRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Asynchronous AI Triage pipeline powered by Google Gemini API.
+    Evaluates patient symptoms, vitals, and medical history to assign acuity level and queue priority.
+    """
+    if current_user.role not in ["admin", "registration", "doctor", "pharmacist", "lab"]:
+        raise HTTPException(status_code=403, detail="Not authorized to run clinical AI triage")
+    
+    triage_result = await analyze_clinical_triage(request)
+    return triage_result
 
 @router.post("/", response_model=QueueEntry, status_code=status.HTTP_201_CREATED)
 def add_to_queue(

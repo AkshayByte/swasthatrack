@@ -1,6 +1,6 @@
 # SwasthaTrack (स्वस्थTrack)
 
-> **A synchronized, role-based hospital workflow and OPD management platform aligned with the Ayushman Bharat Digital Mission (ABDM).**
+> **A synchronized, role-based hospital clinical workflow and real-time OPD management platform.**
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
@@ -25,7 +25,7 @@ In most mid-sized hospitals and community healthcare facilities, operations are 
 ```
                   ┌────────────────────────────────────────┐
                   │      1. REGISTRATION & TRIAGE          │
-                  │   Patient Check-in / ABHA ID Lookup    │
+                  │     Patient Check-in / MRN Intake      │
                   │      Token Assigned to Doctor Queue    │
                   └───────────────────┬────────────────────┘
                                       │
@@ -64,7 +64,7 @@ SwasthaTrack provides 5 dedicated interfaces tailored to each stakeholder's resp
 
 | Dashboard | Target User | Key Capabilities |
 |---|---|---|
-| **Registration Desk** | Front Desk & Triage | Fast patient onboarding, ABHA ID verification, OPD queue generation, doctor allocation |
+| **Registration Desk** | Front Desk & Triage | Fast patient onboarding, EMR intake, OPD queue generation, doctor allocation |
 | **Doctor Station** | Physicians & Consultants | Live queue management, clinical notes, symptom entry, e-prescribing, direct lab order dispatch |
 | **Pharmacy** | Pharmacists & Inventory Staff | Live order feed from doctors, 1-click dispensing, batch tracking, low-stock & expiry alerts |
 | **Laboratory** | Lab Technicians & Pathologists | Pending test queue, sample status tracking, report uploading, verified result publishing |
@@ -76,6 +76,7 @@ SwasthaTrack provides 5 dedicated interfaces tailored to each stakeholder's resp
 
 ### Backend (`/backend`)
 - **FastAPI (Python)**: High-throughput async REST API with automatic OpenAPI documentation.
+- **AI Triage Pipeline (Google Gemini API)**: Asynchronous clinical severity analysis and priority queue scoring with zero-downtime heuristic fallback.
 - **SQLAlchemy ORM**: Flexible schema management; runs on SQLite for zero-setup local dev and PostgreSQL for production.
 - **Pydantic v2**: Strict request and response payload validation.
 - **Security**: Stateless JWT tokens with expiration handling, bcrypt password hashing, and role-based authorization middleware (RBAC).
@@ -107,8 +108,8 @@ SwasthaTrack/
 │   │   ├── lib/api.ts       # Type-safe API communication layer
 │   │   └── pages/           # Astro file-based routes, clinical login, and department consoles
 │   └── package.json
-├── docs/                    # Architecture diagrams, ABDM guides, reports, and design specs
-│   ├── ABDM_INTEGRATION_GUIDE.md
+├── docs/                    # Architecture diagrams, integration guides, reports, and design specs
+│   ├── EHR_INTEGRATION_GUIDE.md
 │   ├── DASHBOARD_INTEGRATION_GUIDE.md
 │   ├── DESIGN_SYSTEM.md
 │   ├── PROJECT_STRUCTURE.md
@@ -197,17 +198,17 @@ pytest -v
 - **Granular Role-Based Access Control (RBAC)**: Route-level protection on all FastAPI endpoints (`/api/patients/`, `/api/queue/`, `/api/medicines/`, `/api/dashboard/`) ensuring least-privilege access for Doctors, Pharmacists, Pathologists, Triage Staff, and Administrators.
 - **Stateless Tokens & Safe Hashing**: JWT tokens with configurable lifespans and bcrypt cryptographic password hashing with 72-byte safe boundary truncation.
 - **Strict Data Validation**: Pydantic v2 schemas shield the database against malformed payloads, injection attempts, and unexpected schema mutation.
-- **ABDM-Ready Architecture**: Data structures aligned with the National Health Authority (NHA) standards for ABHA linkage, health records, and consent artifacts.
+- **Standardized EMR Architecture**: Data structures aligned with international FHIR and standard electronic medical record formats for clinical interoperability.
 
 ---
 
 ## 🗺️ Roadmap
 
-- [x] 5-Role specialized hospital dashboards (Registration, Doctor, Pharmacy, Lab, Patient)
+- [x] 5-Role specialized hospital dashboards (Registration, Doctor, Pharmacy, Lab, Admin)
 - [x] Real-time OPD queue dispatching & token generation
+- [x] Google Gemini AI clinical triage pipeline with ESI score prioritization
 - [x] Fast, decoupled FastAPI backend with SQLite/PostgreSQL portability
 - [x] Migration to Astro MPA + React Islands architecture for maximum SEO and performance
-- [ ] Direct sandbox integration with ABDM Gateway APIs (M1, M2, M3 milestones)
 - [ ] React Native / Expo mobile companion for offline rural clinic triage (`mobile/`)
 - [ ] Automated SMS/WhatsApp notifications for patient token and report readiness
 
@@ -217,7 +218,7 @@ pytest -v
 
 - [Project Directory & File Structure](docs/PROJECT_STRUCTURE.md)
 - [Design System & UI Guidelines](docs/DESIGN_SYSTEM.md)
-- [ABDM Integration Guide](docs/ABDM_INTEGRATION_GUIDE.md)
+- [EHR Integration Guide](docs/EHR_INTEGRATION_GUIDE.md)
 - [Dashboard Integration Technical Guide](docs/DASHBOARD_INTEGRATION_GUIDE.md)
 - [Comprehensive Project Report](docs/PROJECT_REPORT.md)
 - [Academic Capstone Report](docs/Phase_II_Academic_Report.md)

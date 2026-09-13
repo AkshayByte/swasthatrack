@@ -202,7 +202,7 @@ export default function AuthShield({ requiredDepartment, departmentTitle, childr
                 <svg className="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
-                <span>AES-256 encrypted session with ABDM audit compliance.</span>
+                <span>AES-256 encrypted session with HIPAA-compliant clinical audit logs.</span>
               </div>
             </div>
 
@@ -280,87 +280,6 @@ export default function AuthShield({ requiredDepartment, departmentTitle, childr
     );
   }
 
-  // 3. AUTHORIZED STATE: RENDER ACTIVE SESSION HEADER + CHILD COMPONENT
-  return (
-    <div className="space-y-6">
-      {/* Top Clinical Session Security Bar */}
-      <div className="p-3.5 sm:p-4 rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/90 text-slate-900 dark:text-white shadow-sm transition-colors duration-300">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          
-          {/* Staff Info */}
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 via-sky-600 to-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-cyan-500/20">
-              {user.avatarInitials}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-slate-900 dark:text-white tracking-wide">{user.name}</span>
-                <span className="px-2 py-0.5 rounded-full bg-cyan-500/10 dark:bg-cyan-500/20 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300 text-[11px] font-bold uppercase tracking-wider">
-                  {user.role}
-                </span>
-                <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  Encrypted Session Active
-                </span>
-              </div>
-              <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
-                <span className="font-mono text-[11px]">ID: {user.staffId}</span>
-                <span>•</span>
-                <span>{user.department}</span>
-                <span className="hidden md:inline text-slate-400 dark:text-slate-600">•</span>
-                <span className="hidden md:inline text-[11px] text-slate-400 dark:text-slate-500">Apollo Swastha Network • OPD Node 1</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => setShowRoleModal(!showRoleModal)}
-              className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold border border-slate-200 dark:border-slate-700 transition flex items-center gap-1.5 shadow-sm"
-            >
-              <svg className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-              </svg>
-              Switch Role
-            </button>
-            <button
-              onClick={handleLogout}
-              className="px-3.5 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-semibold border border-rose-200 dark:border-rose-800/60 transition flex items-center gap-1.5 shadow-sm"
-            >
-              <svg className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              Lock Console
-            </button>
-          </div>
-
-        </div>
-
-        {/* Modal for Switching Clinical Roles on the fly */}
-        {showRoleModal && (
-          <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
-            {(Object.entries(CLINICAL_STAFF_PROFILES) as [ClinicalRole, RoleProfile][]).map(([roleKey, profile]) => (
-              <button
-                key={roleKey}
-                onClick={() => handleQuickRole(roleKey)}
-                className={`p-3 rounded-xl text-left transition-all border ${
-                  user.role === roleKey
-                    ? 'border-cyan-500 bg-cyan-500/10 dark:bg-cyan-500/20 text-cyan-900 dark:text-cyan-100 shadow-sm'
-                    : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 hover:border-slate-300 dark:hover:border-slate-700 text-slate-700 dark:text-slate-300'
-                }`}
-              >
-                <div className="text-xs font-bold truncate">{profile.name}</div>
-                <div className="text-[10px] text-cyan-600 dark:text-cyan-400 uppercase font-bold tracking-wider mt-0.5">{profile.role}</div>
-                <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate mt-0.5">ID: {profile.staffId}</div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Main Protected Child Content */}
-      {children}
-    </div>
-  );
+  // 3. AUTHORIZED STATE: RENDER CHILD COMPONENT DIRECTLY
+  return <>{children}</>;
 }

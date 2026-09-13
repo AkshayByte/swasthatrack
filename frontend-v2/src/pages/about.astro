@@ -1,153 +1,218 @@
 ---
 import Layout from '../layouts/Layout.astro';
+
+const pillars = [
+  {
+    icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>`,
+    title: 'Immediate triage',
+    color: 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/50',
+    desc: 'AI evaluates each patient\'s symptoms and vitals at check-in, so critical cases are never buried behind a routine appointment.'
+  },
+  {
+    icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>`,
+    title: 'Connected departments',
+    color: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50',
+    desc: 'Doctors, pharmacists, and lab technicians work on a shared live stream. A prescription created in the consultation room appears at the pharmacy counter in seconds.'
+  },
+  {
+    icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>`,
+    title: 'Standardised records',
+    color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50',
+    desc: 'Patient records follow open EMR standards. Patients access their prescriptions and lab results digitally — no physical copy needed.'
+  },
+  {
+    icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>`,
+    title: 'Privacy by design',
+    color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50',
+    desc: 'Strict role-based access means a lab technician cannot see prescription notes and a pharmacist cannot view clinical diagnoses. Patient data is never used for advertising.'
+  },
+];
+
+const team = [
+  { initials: 'VS', name: 'Dr. Vikram Sethi', role: 'Lead Physician & Clinical Advisor', dept: 'Cardiology OPD' },
+  { initials: 'PD', name: 'Pooja Deshmukh', role: 'Patient Intake & Triage Lead', dept: 'Registration Desk' },
+  { initials: 'SV', name: 'Sunil Verma', role: 'Chief Pharmacist', dept: 'Central Pharmacy' },
+  { initials: 'MI', name: 'Dr. Meenakshi Iyer', role: 'Head of Pathology', dept: 'Diagnostic Lab' },
+];
 ---
 
 <Layout
-  title="About Us - SwasthaTrack Healthcare Platform"
-  description="Learn about SwasthaTrack's mission to eliminate hospital queues, empower clinical staff, and provide seamless, compassionate care across India."
+  title="About SwasthaTrack — Our Mission & How We Work"
+  description="SwasthaTrack was built to eliminate the fragmentation in Indian hospital OPDs — connecting every department into one synchronized clinical workflow."
 >
-  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20 space-y-16">
-    
-    <!-- Hero Header -->
-    <div class="text-center max-w-3xl mx-auto space-y-4">
-      <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-100 dark:bg-cyan-950/80 text-cyan-900 dark:text-cyan-200 text-xs font-bold border border-cyan-300 dark:border-cyan-800 shadow-sm">
-        🏥 Our Healthcare Mission
-      </div>
-      <h1 class="text-3xl sm:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
-        Dignified, Queue-Free Healthcare for Every Patient
+
+  <!-- ─── HERO ─── -->
+  <section class="pt-16 pb-20 md:pt-20 md:pb-24">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <span class="section-label mb-4 block">Our mission</span>
+      <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+        No patient should wait <br class="hidden sm:inline" />
+        <span class="text-sky-600 dark:text-sky-400">because of paperwork.</span>
       </h1>
-      <p class="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
-        SwasthaTrack was born out of a simple, urgent conviction: No patient suffering from an emergency should wait in an overcrowded outpatient line, and no doctor should be buried in paperwork.
+      <p class="mt-6 text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
+        SwasthaTrack was built out of a simple observation: in most Indian hospitals, a critical patient waits in the same queue as someone with a routine cold — because reception staff have no way to tell the difference quickly. Paper prescriptions get lost. Lab orders take hours to reach pathology.
+      </p>
+      <p class="mt-4 text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
+        We built a connected system that changes this — starting at the front desk.
       </p>
     </div>
+  </section>
 
-    <!-- The Problem & The Solution Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
-      <div class="p-8 rounded-3xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/40 dark:bg-rose-950/20 space-y-4 flex flex-col justify-between">
-        <div class="space-y-3">
-          <span class="text-xs font-black uppercase tracking-wider text-rose-700 dark:text-rose-400">The Challenge in Hospital OPDs</span>
-          <h3 class="text-xl font-bold text-slate-900 dark:text-white">Long Waiting Lines & Delayed Critical Care</h3>
-          <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-            In standard first-come first-serve hospital reception desks, critical patients (such as someone experiencing early myocardial distress) often wait alongside patients with mild colds. Paper prescriptions get misplaced, and laboratory test orders take hours to reach pathology technicians.
-          </p>
-        </div>
-        <div class="text-xs font-semibold text-rose-700 dark:text-rose-400">
-          Result: High patient anxiety, ER crowding, and physician fatigue.
-        </div>
-      </div>
+  <!-- ─── PROBLEM / SOLUTION ─── -->
+  <section class="py-16 bg-white dark:bg-[#0a1020] border-y border-slate-200 dark:border-slate-800">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
 
-      <div class="p-8 rounded-3xl border border-cyan-200 dark:border-cyan-900/60 bg-cyan-50/40 dark:bg-cyan-950/20 space-y-4 flex flex-col justify-between">
-        <div class="space-y-3">
-          <span class="text-xs font-black uppercase tracking-wider text-cyan-700 dark:text-cyan-400">The SwasthaTrack Solution</span>
-          <h3 class="text-xl font-bold text-slate-900 dark:text-white">Automated Triage & Real-Time Department Routing</h3>
-          <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-            SwasthaTrack instantly evaluates symptoms and vital signs at the reception point. High-acuity emergencies bypass routine wait times, while digital prescriptions and diagnostic requisitions stream instantaneously to the pharmacy and pathology lab.
-          </p>
+        <!-- Problem -->
+        <div class="rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-950/20 p-8">
+          <div class="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 mb-3">The problem</div>
+          <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-4">
+            Fragmented, paper-driven OPDs
+          </h3>
+          <ul class="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+            {[
+              'Critical patients wait behind routine cases with no urgency sorting.',
+              'Doctors write prescriptions on paper that pharmacists misread or lose.',
+              'Lab test orders are carried physically between departments.',
+              'Patients wait hours for printed reports that could be shared instantly.',
+            ].map(item => (
+              <li class="flex items-start gap-3">
+                <svg class="w-4 h-4 text-rose-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
         </div>
-        <div class="text-xs font-semibold text-cyan-700 dark:text-cyan-400">
-          Result: 65% faster consultations and life-saving emergency prioritization.
+
+        <!-- Solution -->
+        <div class="rounded-2xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20 p-8">
+          <div class="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-3">Our approach</div>
+          <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-4">
+            One platform, every department
+          </h3>
+          <ul class="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+            {[
+              'AI scores every patient at check-in — emergencies are elevated automatically.',
+              'Doctors write digital prescriptions that appear at the pharmacy in real time.',
+              'Lab requisitions are dispatched electronically the moment a doctor orders them.',
+              'Patients access their reports and prescriptions on any device.',
+            ].map(item => (
+              <li class="flex items-start gap-3">
+                <svg class="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+          <div class="mt-5 pt-4 border-t border-emerald-200 dark:border-emerald-900/40 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+            Result: Up to 65% faster consultations, fewer errors, less waiting.
+          </div>
         </div>
+
       </div>
     </div>
+  </section>
 
-    <!-- 4 Core Pillars of Patient Care -->
-    <div class="space-y-6">
-      <div class="text-center max-w-2xl mx-auto">
-        <span class="text-xs font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">Our Core Principles</span>
-        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mt-1">
-          Four Pillars of Modern Patient Care
+  <!-- ─── FOUR PILLARS ─── -->
+  <section class="py-20 bg-slate-50 dark:bg-[#070d1a]">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+
+      <div class="text-center mb-12">
+        <span class="section-label">What we stand for</span>
+        <h2 class="mt-3 text-3xl font-extrabold text-slate-900 dark:text-white">
+          Four principles we never compromise on
         </h2>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#11192e] shadow-sm space-y-3">
-          <div class="w-10 h-10 rounded-2xl bg-cyan-100 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 font-extrabold flex items-center justify-center text-sm">
-            01
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {pillars.map(p => (
+          <div class="flex items-start gap-4 p-6 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+            <div class={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${p.color}`} set:html={p.icon} />
+            <div>
+              <h3 class="font-bold text-slate-900 dark:text-white text-base mb-1.5">{p.title}</h3>
+              <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{p.desc}</p>
+            </div>
           </div>
-          <h3 class="font-bold text-slate-900 dark:text-white text-base">Immediate AI Triage</h3>
-          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-            Clinical intelligence analyzes chief symptoms and vital signs to identify high-risk conditions before patients enter the waiting hall.
-          </p>
-        </div>
-
-        <div class="p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#11192e] shadow-sm space-y-3">
-          <div class="w-10 h-10 rounded-2xl bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-extrabold flex items-center justify-center text-sm">
-            02
-          </div>
-          <h3 class="font-bold text-slate-900 dark:text-white text-base">Connected Departments</h3>
-          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-            Doctors, pharmacists, and pathologists work on a unified live stream. Prescriptions and lab requests transmit without physical paper.
-          </p>
-        </div>
-
-        <div class="p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#11192e] shadow-sm space-y-3">
-          <div class="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-extrabold flex items-center justify-center text-sm">
-            03
-          </div>
-          <h3 class="font-bold text-slate-900 dark:text-white text-base">National ABDM Integration</h3>
-          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-            Full compliance with Ayushman Bharat Digital Mission. Patients hold their ABHA digital health cards with lifetime record accessibility.
-          </p>
-        </div>
-
-        <div class="p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#11192e] shadow-sm space-y-3">
-          <div class="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 font-extrabold flex items-center justify-center text-sm">
-            04
-          </div>
-          <h3 class="font-bold text-slate-900 dark:text-white text-base">Patient Data Privacy</h3>
-          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-            AES-256 cryptographic health data storage with consent-driven sharing. No patient health records are ever used for commercial advertising.
-          </p>
-        </div>
+        ))}
       </div>
+
     </div>
+  </section>
 
-    <!-- Trust & Quality Standards -->
-    <div class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#11192e] p-8 sm:p-10 shadow-sm space-y-6">
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-6">
-        <div>
-          <h2 class="text-2xl font-bold text-slate-900 dark:text-white">Healthcare Security & Compliance Standards</h2>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Engineered to meet the highest national healthcare data benchmarks.</p>
-        </div>
-        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 text-xs font-bold border border-emerald-300 dark:border-emerald-800">
-          🛡️ Government & Clinical Verification
-        </div>
+  <!-- ─── DEMO CLINICAL TEAM ─── -->
+  <section class="py-20 bg-white dark:bg-[#0a1020] border-y border-slate-200 dark:border-slate-800">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+
+      <div class="text-center mb-12">
+        <span class="section-label">Demo accounts</span>
+        <h2 class="mt-3 text-3xl font-extrabold text-slate-900 dark:text-white">
+          Meet the demo clinical staff
+        </h2>
+        <p class="mt-4 text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+          Use the "Staff Sign In" button in the top-right corner to log in as any of these roles and explore their dedicated console.
+        </p>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1.5">
-          <div class="font-bold text-slate-900 dark:text-white text-sm">ABDM / NHA Architecture</div>
-          <p class="text-slate-600 dark:text-slate-400 leading-relaxed">Strict adherence to National Health Authority (NHA) protocols for Ayushman Bharat Digital Mission.</p>
-        </div>
-
-        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1.5">
-          <div class="font-bold text-slate-900 dark:text-white text-sm">FHIR / HL7 Data Standard</div>
-          <p class="text-slate-600 dark:text-slate-400 leading-relaxed">Interoperable clinical records exchange conforming to international healthcare informatics standards.</p>
-        </div>
-
-        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1.5">
-          <div class="font-bold text-slate-900 dark:text-white text-sm">24/7 Clinical Network Uptime</div>
-          <p class="text-slate-600 dark:text-slate-400 leading-relaxed">Continuous high-availability infrastructure with offline synchronization for remote rural clinics.</p>
-        </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        {team.map(member => (
+          <div class="flex items-center gap-4 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white font-bold flex items-center justify-center text-sm flex-shrink-0">
+              {member.initials}
+            </div>
+            <div>
+              <div class="font-semibold text-slate-900 dark:text-white text-sm">{member.name}</div>
+              <div class="text-xs text-sky-600 dark:text-sky-400 font-medium mt-0.5">{member.role}</div>
+              <div class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{member.dept}</div>
+            </div>
+          </div>
+        ))}
       </div>
+
     </div>
+  </section>
 
-    <!-- Contact CTA -->
-    <div class="text-center space-y-4 pt-4">
-      <h3 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Partner with SwasthaTrack for Your Hospital</h3>
-      <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-xl mx-auto">
-        Join our growing network of primary healthcare centers, clinics, and tertiary multi-specialty hospitals transforming healthcare delivery.
+  <!-- ─── TECH STANDARDS ─── -->
+  <section class="py-20 bg-slate-50 dark:bg-[#070d1a]">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+
+      <div class="text-center mb-12">
+        <span class="section-label">Technical standards</span>
+        <h2 class="mt-3 text-3xl font-extrabold text-slate-900 dark:text-white">
+          Built to interoperate with existing systems
+        </h2>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        {[
+          { title: 'FHIR / HL7 Compatible', desc: 'Patient record structures follow international health informatics standards for interoperability with existing hospital systems.' },
+          { title: 'Open EMR Architecture', desc: 'No vendor lock-in. The platform is open-source and self-hostable on any standard Linux server or cloud provider.' },
+          { title: 'Offline-First Design', desc: 'Core workflows function during internet outages with local caching and automatic server sync when connectivity resumes.' },
+        ].map(item => (
+          <div class="p-6 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+            <div class="font-bold text-slate-900 dark:text-white text-sm mb-2">{item.title}</div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{item.desc}</p>
+          </div>
+        ))}
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ─── CTA ─── -->
+  <section class="py-16 bg-white dark:bg-[#0a1020] border-t border-slate-200 dark:border-slate-800">
+    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+      <h3 class="text-2xl font-bold text-slate-900 dark:text-white">Want to deploy SwasthaTrack at your facility?</h3>
+      <p class="text-sm text-slate-500 dark:text-slate-400">
+        Reach out to our team. We'll help you configure it for your hospital's size and workflow.
       </p>
-      <div class="pt-2">
-        <a
-          href="/contact"
-          class="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 shadow-md transition-all"
-        >
-          Contact Hospital Relations Team →
+      <div class="pt-2 flex items-center justify-center gap-3">
+        <a href="/contact" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-sky-600 hover:bg-sky-700 transition-colors shadow-sm">
+          Contact us →
+        </a>
+        <a href="/dashboard" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-sky-400 transition-colors">
+          Try the demo
         </a>
       </div>
     </div>
+  </section>
 
-  </div>
 </Layout>
-
