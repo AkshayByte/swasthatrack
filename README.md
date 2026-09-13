@@ -249,38 +249,65 @@ When presenting SwasthaTrack in technical interviews, use these structured talki
 - Node.js 18+
 - Git
 
-### 2. Backend Setup
-```bash
-# Navigate to backend
-cd backend
+---
 
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+### 🚀 Option A: 1-Click / 1-Command Startup (Recommended)
 
-# Install dependencies
-pip install -r requirements.txt
+You can launch both the **FastAPI Backend (Port 8000)** and **Astro Frontend (Port 4321)** simultaneously in parallel with a single command:
 
-# Start backend dev server
-uvicorn main:app --reload --port 8000
+#### On Windows:
+Double-click [`start-dev.bat`](start-dev.bat) or run in terminal:
+```cmd
+start-dev.bat
 ```
-- API Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
-- Health Check: [http://localhost:8000/health](http://localhost:8000/health)
 
-### 3. Frontend Setup
+#### On Linux / macOS:
 ```bash
-# Navigate to frontend
-cd frontend-v2
+chmod +x start-dev.sh
+./start-dev.sh
+```
 
-# Install dependencies
-npm install
-
-# Start frontend dev server
+#### Via Root NPM:
+```bash
 npm run dev
 ```
-- Live UI: [http://localhost:4321](http://localhost:4321)
 
-### 4. Running Test Suites
+- **Frontend Application**: [http://localhost:4321](http://localhost:4321)
+- **Interactive API Swagger Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Health Check Endpoint**: [http://localhost:8000/health](http://localhost:8000/health)
+
+---
+
+### ⚙️ Option B: Modular / Independent Startup
+
+If you are working specifically on backend logic or frontend design in isolation, you can run either service independently:
+
+#### Backend Only (FastAPI + SQLite/PostgreSQL)
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+```
+
+#### Frontend Only (Astro + React Islands)
+```bash
+cd frontend-v2
+npm install
+npm run dev
+```
+
+> [!TIP]
+> **Why are Backend and Frontend structured as separate runtimes?**  
+> SwasthaTrack follows a **Decoupled Production Architecture**:
+> 1. **Independent Runtimes**: The backend uses Python's ASGI runtime for high-throughput I/O and AI orchestration, while the frontend runs on Node.js/Vite for static compilation and Edge delivery.
+> 2. **Separate Scaling & Cloud Deployment**: In production, the backend scales independently inside Docker containers on **Render**, while the frontend is deployed to global Edge CDN servers on **Vercel**.
+> 3. **Isolated Failures & Faster HMR**: Frontend UI changes hot-reload instantly via Vite without restarting the Python database connection pool.
+
+---
+
+### 🧪 Running Test Suites
 ```bash
 # Run backend pytest suite (24 tests)
 cd backend
