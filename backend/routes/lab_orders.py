@@ -106,6 +106,11 @@ def get_lab_order(
     report = db.query(LabReportModel).filter(LabReportModel.id == order_id).first()
     if not report:
         raise HTTPException(status_code=404, detail="Lab order not found")
+
+    if current_user.role not in ["admin", "lab", "doctor", "registration"]:
+        if not report.patient or current_user.email != report.patient.email:
+            raise HTTPException(status_code=403, detail="Not authorized to access this diagnostic lab order")
+
     return _format_lab_order(report)
 
 
@@ -157,6 +162,10 @@ def get_patient_lab_orders(
     patient = db.query(PatientModel).filter(PatientModel.id == patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
+
+    if current_user.role not in ["admin", "lab", "doctor", "registration"]:
+        if current_user.email != patient.email:
+            raise HTTPException(status_code=403, detail="Not authorized to access patient lab orders")
 
     records = db.query(LabReportModel).filter(LabReportModel.patient_id == patient_id).all()
     return [_format_lab_order(report, patient_name=patient.name) for report in records]

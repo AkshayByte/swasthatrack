@@ -92,3 +92,23 @@ def test_get_prescriptions_list(client: TestClient, pharmacist_token: str, docto
     data = response.json()
     assert isinstance(data, list)
     assert len(data) >= 1
+
+def test_unauthorized_user_cannot_access_individual_or_patient_prescriptions(client: TestClient, token: str, doctor_token: str, sample_patient: Patient):
+    res = client.post(
+        "/api/prescriptions/",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={"patient_id": sample_patient.id, "medicines": [{"name": "Amoxicillin 500mg"}]}
+    )
+    rx_id = res.json()["id"]
+
+    rx_res = client.get(
+        f"/api/prescriptions/{rx_id}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert rx_res.status_code == 403
+
+    patient_res = client.get(
+        f"/api/prescriptions/patient/{sample_patient.id}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert patient_res.status_code == 403

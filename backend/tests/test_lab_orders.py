@@ -92,3 +92,23 @@ def test_get_lab_orders_list(client: TestClient, lab_token: str, doctor_token: s
     assert response.status_code == 200
     assert isinstance(response.json(), list)
     assert len(response.json()) >= 1
+
+def test_unauthorized_user_cannot_access_individual_or_patient_lab_orders(client: TestClient, token: str, doctor_token: str, sample_patient: Patient):
+    res = client.post(
+        "/api/lab-orders/",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={"patient_id": sample_patient.id, "test_name": "Serum Creatinine"}
+    )
+    order_id = res.json()["id"]
+
+    order_res = client.get(
+        f"/api/lab-orders/{order_id}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert order_res.status_code == 403
+
+    patient_res = client.get(
+        f"/api/lab-orders/patient/{sample_patient.id}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert patient_res.status_code == 403

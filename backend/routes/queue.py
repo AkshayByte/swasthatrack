@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from typing import List
 from database import get_db
 from models.queue import QueueEntry as QueueEntryModel
@@ -35,32 +36,45 @@ def add_to_queue(
     if current_user.role not in ["admin", "registration", "doctor"]:
         raise HTTPException(status_code=403, detail="Not authorized to triage patients to queue")
 
-    # Auto-generate queue number if empty or not provided (format: Q-YYYYMMDD-001)
-    if not entry.queue_number or entry.queue_number.strip() == "":
-        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-        today_str = today_start.strftime("%Y%m%d")
-        count = db.query(QueueEntryModel).filter(QueueEntryModel.created_at >= today_start).count()
-        candidate = f"Q-{today_str}-{(count + 1):03d}"
-        while db.query(QueueEntryModel).filter(QueueEntryModel.queue_number == candidate).first() is not None:
-            count += 1
-            candidate = f"Q-{today_str}-{(count + 1):03d}"
-        entry.queue_number = candidate
-    
-    db_entry = QueueEntryModel(
-        patient_id=entry.patient_id,
-        queue_number=entry.queue_number,
-        service_type=entry.service_type,
-        doctor_id=entry.doctor_id,
-        doctor_name=entry.doctor_name,
-        priority=entry.priority,
-        status=entry.status,
-        estimated_wait_time=entry.estimated_wait_time,
-        notes=entry.notes
-    )
-    db.add(db_entry)
-    db.commit()
-    db.refresh(db_entry)
-    return db_entry
+    max_retries = 5
+    for attempt in range(max_retries):
+        # Auto-generate queue number if empty or not provided (format: Q-YYYYMMDD-001)
+        if not entry.queue_number or entry.queue_number.strip() == "":
+            today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+            today_str = today_start.strftime("%Y%m%d")
+            count = db.query(QueueEntryModel).filter(QueueEntryModel.created_at >= today_start).count()
+            candidate = f"Q-{today_str}-{(count + attempt + 1):03d}"
+            while db.query(QueueEntryModel).filter(QueueEntryModel.queue_number == candidate).first() is not None:
+                count += 1
+                candidate = f"Q-{today_str}-{(count + attempt + 1):03d}"
+            entry.queue_number = candidate
+        
+        status_val = entry.status.value if hasattr(entry.status, "value") else entry.status
+        db_entry = QueueEntryModel(
+            patient_id=entry.patient_id,
+            queue_number=entry.queue_number,
+            service_type=entry.service_type,
+            doctor_id=entry.doctor_id,
+            doctor_name=entry.doctor_name,
+            priority=entry.priority,
+            status=status_val,
+            estimated_wait_time=entry.estimated_wait_time,
+            notes=entry.notes
+        )
+        try:
+            db.add(db_entry)
+            db.commit()
+            db.refresh(db_entry)
+            return db_entry
+        except IntegrityError:
+            db.rollback()
+            if attempt == max_retries - 1:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Queue token collision detected under high concurrency. Please retry."
+                )
+            # Clear candidate queue number to recalculate in next iteration
+            entry.queue_number = ""
 
 @router.get("/", response_model=List[QueueEntry])
 def read_queue(

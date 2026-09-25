@@ -171,8 +171,8 @@ async def google_login(request: Request, auth_req: GoogleAuthRequest, db: Sessio
     # Look up existing user
     user = db.query(User).filter(User.email == email.lower()).first()
     if not user:
-        # Automatically assign admin if in SUPERADMIN_EMAILS, otherwise registration role
-        assigned_role = "admin" if email.lower() in superadmin_emails else "registration"
+        # Automatically assign admin if in SUPERADMIN_EMAILS, otherwise default to user role
+        assigned_role = UserRole.ADMIN.value if email.lower() in superadmin_emails else UserRole.USER.value
         user = User(
             email=email.lower(),
             hashed_password=get_password_hash("OAuth_Google_Managed_" + email.lower()),

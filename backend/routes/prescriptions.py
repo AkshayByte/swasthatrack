@@ -122,6 +122,11 @@ def get_prescription(
     rx = db.query(PrescriptionModel).filter(PrescriptionModel.id == rx_id).first()
     if not rx:
         raise HTTPException(status_code=404, detail="Prescription not found")
+
+    if current_user.role not in ["admin", "pharmacist", "doctor", "registration"]:
+        if not rx.patient or current_user.email != rx.patient.email:
+            raise HTTPException(status_code=403, detail="Not authorized to access this clinical prescription")
+
     return _format_prescription(rx)
 
 
@@ -163,6 +168,10 @@ def get_patient_prescriptions(
     patient = db.query(PatientModel).filter(PatientModel.id == patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
+
+    if current_user.role not in ["admin", "pharmacist", "doctor", "registration"]:
+        if current_user.email != patient.email:
+            raise HTTPException(status_code=403, detail="Not authorized to access patient prescriptions")
 
     records = db.query(PrescriptionModel).filter(PrescriptionModel.patient_id == patient_id).all()
     return [_format_prescription(rx, patient_name=patient.name) for rx in records]

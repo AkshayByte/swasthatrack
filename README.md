@@ -49,7 +49,7 @@ graph TD
 
     subgraph "CI/CD Pipeline"
         GitHub["GitHub Repository (main)"] -->|"git push"| GHA["GitHub Actions CI"]
-        GHA -->|"Lint & Pytest (37 Tests)"| TestPass["Automated Test Verification"]
+        GHA -->|"Lint & Pytest (40 Tests)"| TestPass["Automated Test Verification"]
         TestPass -->|"Webhook Auto-Deploy"| Render
         TestPass -->|"Edge Auto-Deploy (12 Pages)"| Vercel
     end
@@ -221,7 +221,7 @@ SwasthaTrack adheres to enterprise-grade clinical data integrity and threat miti
 
 ### Continuous Integration Pipeline
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) triggers on every push and PR to `main`:
-- **Backend Test Job**: Sets up Python 3.12, installs dependencies, and runs **all 37 pytest unit tests** covering auth, AI triage, patient intake, concurrency-safe queues, prescriptions, and lab orders.
+- **Backend Test Job**: Sets up Python 3.12, installs dependencies, and runs **all 40 pytest unit tests** covering auth, AI triage, patient intake, concurrency-safe queues, object-level authorization (IDOR protection), prescriptions, and lab orders.
 - **Frontend Build Job**: Sets up Node.js 20, builds Astro static output (12 pages), verifies TypeScript types and generates XML sitemaps.
 
 ---
@@ -346,18 +346,19 @@ python seed.py             # Seeds initial clinical staff accounts
 uvicorn main:app --reload --port 8000
 ```
 
-#### Clinical Staff Credentials (Local Development & Testing Only)
+#### Clinical Staff Provisioning & Local Testing
 > [!IMPORTANT]
 > **Production vs. Development Authentication**:  
-> In local development, running `python seed.py` populates baseline testing accounts for all 5 clinical consoles. In production, password-based staff provisioning is restricted to authenticated Administrators via `POST /api/auth/users`, and SuperAdmin elevation is managed securely via Google OAuth (`SUPERADMIN_EMAILS`).
+> - **Production**: Static passwords are never published or exposed. Administrator privileges are granted via Google OAuth to whitelisted emails (`SUPERADMIN_EMAILS`), and clinical staff accounts are provisioned dynamically via `POST /api/auth/users`.
+> - **Local Development**: Running `python seed.py` populates baseline testing accounts for all 5 consoles. To inspect your local testing passwords, refer to `backend/local_staff_credentials.md` (strictly git-ignored for your local machine).
 
-| Role | Demo Email | Demo Password | Console Access |
-|---|---|---|---|
-| **Admin** | `admin@swasthatrack.org` | `Admin@1234` | Full System Access |
-| **Doctor** | `doctor@swasthatrack.org` | `Doctor@1234` | Doctor Consultation |
-| **Pharmacist** | `pharmacy@swasthatrack.org` | `Pharma@1234` | Pharmacy Dispensary |
-| **Lab Technician** | `lab@swasthatrack.org` | `Lab@12345` | Laboratory Diagnostics |
-| **Receptionist** | `reception@swasthatrack.org` | `Recep@1234` | Patient Registration |
+| Role | Default Email Pattern | Access Scope |
+|---|---|---|
+| **Admin** | `admin@swasthatrack.org` | Full Hospital System Access & Role Provisioning |
+| **Doctor** | `doctor@swasthatrack.org` | Doctor Station & Clinical E-Prescription / Labs |
+| **Pharmacist** | `pharmacy@swasthatrack.org` | Central Pharmacy Dispensary & Drug Inventory |
+| **Lab Technician** | `lab@swasthatrack.org` | Diagnostic Laboratory & Specimen Analysis |
+| **Receptionist** | `reception@swasthatrack.org` | Registration Desk & OPD Queue Triage Intake |
 
 #### Frontend Only (Astro + React Islands)
 ```bash
@@ -377,7 +378,7 @@ npm run dev
 
 ### 🧪 Running Test Suites
 ```bash
-# Run backend pytest suite (37 tests across all subsystems)
+# Run backend pytest suite (40 tests across all subsystems)
 cd backend
 python -m pytest
 
