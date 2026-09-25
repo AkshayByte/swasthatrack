@@ -288,8 +288,18 @@ cd backend
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+python seed.py             # Seeds initial clinical staff accounts
 uvicorn main:app --reload --port 8000
 ```
+
+#### Clinical Staff Credentials (Post-Seed)
+| Role | Email | Password | Console Access |
+|---|---|---|---|
+| **Admin** | `admin@swasthatrack.org` | `Admin@1234` | Full System Access |
+| **Doctor** | `doctor@swasthatrack.org` | `Doctor@1234` | Doctor Consultation |
+| **Pharmacist** | `pharmacy@swasthatrack.org` | `Pharma@1234` | Pharmacy Dispensary |
+| **Lab Technician** | `lab@swasthatrack.org` | `Lab@12345` | Laboratory Diagnostics |
+| **Receptionist** | `reception@swasthatrack.org` | `Recep@1234` | Patient Registration |
 
 #### Frontend Only (Astro + React Islands)
 ```bash

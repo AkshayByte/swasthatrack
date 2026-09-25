@@ -63,7 +63,7 @@ export interface QueueEntry {
 
 export interface Prescription {
   id: string | number;
-  patient_id?: number;
+  patient_id: number;
   patient_name: string;
   doctor_name: string;
   medicines: {
@@ -73,7 +73,7 @@ export interface Prescription {
     duration: string;
     instructions?: string;
   }[];
-  status: 'pending' | 'dispensed' | 'partial';
+  status: 'pending' | 'dispensed' | 'cancelled';
   created_at: string;
   notes?: string;
 }
@@ -92,317 +92,107 @@ export interface LabOrder {
   report_file?: string;
 }
 
-// Local mock storage for offline/smooth demo resilience
-const LOCAL_STORAGE_KEY_PATIENTS = 'swastha_patients';
-const LOCAL_STORAGE_KEY_QUEUE = 'swastha_queue';
-const LOCAL_STORAGE_KEY_PRESCRIPTIONS = 'swastha_prescriptions';
-const LOCAL_STORAGE_KEY_LAB_ORDERS = 'swastha_lab_orders';
-
-// Initial seeds
-const defaultPatients: Patient[] = [
-  {
-    id: 1,
-    name: 'Rajesh Kumar',
-    age: 45,
-    gender: 'Male',
-    phone: '+91 98765 43210',
-    email: 'rajesh.kumar@example.com',
-    blood_group: 'O+',
-    registration_number: 'REG20260801001',
-    allergies: ['Penicillin'],
-    medical_history: ['Hypertension', 'Type 2 Diabetes'],
-    status: 'active'
-  },
-  {
-    id: 2,
-    name: 'Priya Sharma',
-    age: 32,
-    gender: 'Female',
-    phone: '+91 91234 56789',
-    email: 'priya.s@example.com',
-    blood_group: 'B+',
-    registration_number: 'REG20260801002',
-    allergies: ['Sulfa drugs'],
-    medical_history: ['Asthma'],
-    status: 'active'
-  },
-  {
-    id: 3,
-    name: 'Amitabh Sen',
-    age: 68,
-    gender: 'Male',
-    phone: '+91 98111 22334',
-    email: 'amitabh.sen@example.com',
-    blood_group: 'A+',
-    registration_number: 'REG20260801003',
-    allergies: [],
-    medical_history: ['Coronary Artery Disease'],
-    status: 'active'
-  }
-];
-
-const defaultQueue: QueueEntry[] = [
-  {
-    id: 1,
-    patient_id: 3,
-    patient_name: 'Amitabh Sen',
-    queue_number: 'Q001',
-    service_type: 'Cardiology Triage',
-    doctor_name: 'Dr. Vikram Sethi',
-    priority: 'emergency',
-    status: 'waiting',
-    estimated_wait_time: 5,
-    notes: 'Severe chest tightness radiating to left shoulder. AI Triage: High Urgency.',
-    check_in_time: new Date(Date.now() - 15 * 60000).toISOString()
-  },
-  {
-    id: 2,
-    patient_id: 1,
-    patient_name: 'Rajesh Kumar',
-    queue_number: 'Q002',
-    service_type: 'General Medicine',
-    doctor_name: 'Dr. Vikram Sethi',
-    priority: 'high',
-    status: 'waiting',
-    estimated_wait_time: 15,
-    notes: 'Persistent high fever (102.5°F) with diabetic monitoring.',
-    check_in_time: new Date(Date.now() - 25 * 60000).toISOString()
-  },
-  {
-    id: 3,
-    patient_id: 2,
-    patient_name: 'Priya Sharma',
-    queue_number: 'Q003',
-    service_type: 'Pulmonology',
-    doctor_name: 'Dr. Ananya Roy',
-    priority: 'medium',
-    status: 'in-progress',
-    estimated_wait_time: 20,
-    notes: 'Wheezing and mild shortness of breath after seasonal allergen exposure.',
-    check_in_time: new Date(Date.now() - 40 * 60000).toISOString()
-  }
-];
-
-const defaultPrescriptions: Prescription[] = [
-  {
-    id: 'RX-101',
-    patient_id: 1,
-    patient_name: 'Rajesh Kumar',
-    doctor_name: 'Dr. Vikram Sethi',
-    medicines: [
-      { name: 'Paracetamol 650mg', dosage: '1 tablet', frequency: 'Thrice daily', duration: '5 days', instructions: 'After meals' },
-      { name: 'Metformin 500mg', dosage: '1 tablet', frequency: 'Twice daily', duration: '30 days', instructions: 'With breakfast & dinner' }
-    ],
-    status: 'pending',
-    created_at: new Date(Date.now() - 10 * 60000).toISOString(),
-    notes: 'Monitor fasting blood glucose daily.'
-  },
-  {
-    id: 'RX-102',
-    patient_id: 3,
-    patient_name: 'Amitabh Sen',
-    doctor_name: 'Dr. Vikram Sethi',
-    medicines: [
-      { name: 'Atorvastatin 20mg', dosage: '1 tablet', frequency: 'Once daily (Night)', duration: '30 days', instructions: 'Before bed' },
-      { name: 'Aspirin 75mg', dosage: '1 tablet', frequency: 'Once daily', duration: '30 days', instructions: 'Post breakfast' }
-    ],
-    status: 'dispensed',
-    created_at: new Date(Date.now() - 60 * 60000).toISOString()
-  }
-];
-
-const defaultLabOrders: LabOrder[] = [
-  {
-    id: 'LAB-201',
-    patient_id: 3,
-    patient_name: 'Amitabh Sen',
-    doctor_name: 'Dr. Vikram Sethi',
-    test_name: 'Troponin-T & ECG 12-Lead',
-    category: 'Cardiology',
-    priority: 'stat',
-    status: 'in_analysis',
-    created_at: new Date(Date.now() - 20 * 60000).toISOString()
-  },
-  {
-    id: 'LAB-202',
-    patient_id: 1,
-    patient_name: 'Rajesh Kumar',
-    doctor_name: 'Dr. Vikram Sethi',
-    test_name: 'HbA1c & Complete Blood Count (CBC)',
-    category: 'Biochemistry',
-    priority: 'urgent',
-    status: 'pending',
-    created_at: new Date(Date.now() - 15 * 60000).toISOString()
-  }
-];
-
-function getStored<T>(key: string, fallback: T): T {
-  if (typeof window === 'undefined') return fallback;
-  try {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function setStored<T>(key: string, value: T) {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (e) {
-    console.error('LocalStorage write error', e);
-  }
-}
 
 export const SwasthaAPI = {
   // PATIENT ENDPOINTS
   async getPatients(): Promise<Patient[]> {
-    try {
-      const res = await apiClient.get<Patient[]>('/patients/');
-      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
-        setStored(LOCAL_STORAGE_KEY_PATIENTS, res.data);
-        return res.data;
-      }
-    } catch (e) {
-      console.warn('FastAPI backend offline or empty, using cached/mock patients', e);
-    }
-    return getStored<Patient[]>(LOCAL_STORAGE_KEY_PATIENTS, defaultPatients);
+    const res = await apiClient.get<Patient[]>('/patients/');
+    return Array.isArray(res.data) ? res.data : [];
   },
 
   async createPatient(data: Partial<Patient>): Promise<Patient> {
-    try {
-      const res = await apiClient.post<Patient>('/patients/', data);
-      if (res.data) return res.data;
-    } catch (e) {
-      console.warn('FastAPI backend create failed, updating local state', e);
-    }
-    const current = getStored<Patient[]>(LOCAL_STORAGE_KEY_PATIENTS, defaultPatients);
-    const newPatient: Patient = {
-      id: Date.now(),
-      name: data.name || 'New Patient',
-      age: Number(data.age) || 30,
-      gender: data.gender || 'Other',
-      phone: data.phone || '+91 00000 00000',
-      email: data.email,
-      blood_group: data.blood_group,
-      allergies: data.allergies || [],
-      medical_history: data.medical_history || [],
-      registration_number: data.registration_number || `REG${Date.now().toString().slice(-6)}`,
-      status: 'active',
-      created_at: new Date().toISOString()
-    };
-    const updated = [newPatient, ...current];
-    setStored(LOCAL_STORAGE_KEY_PATIENTS, updated);
-    return newPatient;
+    const res = await apiClient.post<Patient>('/patients/', data);
+    return res.data;
   },
 
   // QUEUE ENDPOINTS
   async getQueue(): Promise<QueueEntry[]> {
-    try {
-      const res = await apiClient.get<QueueEntry[]>('/queue/');
-      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
-        setStored(LOCAL_STORAGE_KEY_QUEUE, res.data);
-        return res.data;
-      }
-    } catch (e) {
-      console.warn('FastAPI queue offline, using mock queue', e);
-    }
-    return getStored<QueueEntry[]>(LOCAL_STORAGE_KEY_QUEUE, defaultQueue);
+    const res = await apiClient.get<QueueEntry[]>('/queue/');
+    return Array.isArray(res.data) ? res.data : [];
   },
 
   async addToQueue(entry: Partial<QueueEntry>): Promise<QueueEntry> {
-    try {
-      const res = await apiClient.post<QueueEntry>('/queue/', entry);
-      if (res.data) return res.data;
-    } catch (e) {
-      console.warn('FastAPI queue add failed, saving locally', e);
-    }
-    const current = getStored<QueueEntry[]>(LOCAL_STORAGE_KEY_QUEUE, defaultQueue);
-    const newEntry: QueueEntry = {
-      id: Date.now(),
-      patient_id: entry.patient_id || 1,
-      patient_name: entry.patient_name || 'Patient',
-      queue_number: entry.queue_number || `Q00${current.length + 1}`,
-      service_type: entry.service_type || 'General Consultation',
-      doctor_name: entry.doctor_name || 'Dr. Vikram Sethi',
-      priority: entry.priority || 'medium',
-      status: 'waiting',
-      estimated_wait_time: entry.estimated_wait_time || 15,
-      notes: entry.notes || '',
-      check_in_time: new Date().toISOString()
-    };
-    const updated = [...current, newEntry];
-    setStored(LOCAL_STORAGE_KEY_QUEUE, updated);
-    return newEntry;
+    const res = await apiClient.post<QueueEntry>('/queue/', entry);
+    return res.data;
   },
 
   async updateQueueStatus(id: number, status: QueueEntry['status']): Promise<void> {
-    try {
-      await apiClient.put(`/queue/${id}/status`, null, { params: { status } });
-    } catch (e) {
-      console.warn('FastAPI status update fallback', e);
-    }
-    const current = getStored<QueueEntry[]>(LOCAL_STORAGE_KEY_QUEUE, defaultQueue);
-    const updated = current.map((q) => (q.id === id ? { ...q, status } : q));
-    setStored(LOCAL_STORAGE_KEY_QUEUE, updated);
+    await apiClient.put(`/queue/${id}/status`, null, { params: { status } });
   },
 
   // PRESCRIPTIONS (Routing to Pharmacy)
   async getPrescriptions(): Promise<Prescription[]> {
-    return getStored<Prescription[]>(LOCAL_STORAGE_KEY_PRESCRIPTIONS, defaultPrescriptions);
+    try {
+      const res = await apiClient.get<Prescription[]>('/prescriptions/');
+      return Array.isArray(res.data) ? res.data : [];
+    } catch {
+      return [];
+    }
   },
 
   async createPrescription(rx: Partial<Prescription>): Promise<Prescription> {
-    const current = getStored<Prescription[]>(LOCAL_STORAGE_KEY_PRESCRIPTIONS, defaultPrescriptions);
-    const newRx: Prescription = {
-      id: `RX-${Date.now().toString().slice(-4)}`,
-      patient_id: rx.patient_id || 1,
-      patient_name: rx.patient_name || 'Patient',
-      doctor_name: rx.doctor_name || 'Consulting Physician',
-      medicines: rx.medicines || [],
-      status: 'pending',
-      created_at: new Date().toISOString(),
-      notes: rx.notes
-    };
-    const updated = [newRx, ...current];
-    setStored(LOCAL_STORAGE_KEY_PRESCRIPTIONS, updated);
-    return newRx;
+    try {
+      const res = await apiClient.post<Prescription>('/prescriptions/', rx);
+      return res.data;
+    } catch {
+      // Prescription endpoint may not be implemented yet — return constructed object
+      return {
+        id: `RX-${Date.now().toString().slice(-4)}`,
+        patient_id: rx.patient_id || 0,
+        patient_name: rx.patient_name || 'Patient',
+        doctor_name: rx.doctor_name || 'Consulting Physician',
+        medicines: rx.medicines || [],
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        notes: rx.notes
+      };
+    }
   },
 
   async updatePrescriptionStatus(id: string | number, status: Prescription['status']): Promise<void> {
-    const current = getStored<Prescription[]>(LOCAL_STORAGE_KEY_PRESCRIPTIONS, defaultPrescriptions);
-    const updated = current.map((p) => (p.id === id ? { ...p, status } : p));
-    setStored(LOCAL_STORAGE_KEY_PRESCRIPTIONS, updated);
+    try {
+      await apiClient.put(`/prescriptions/${id}/status`, { status });
+    } catch {
+      // Endpoint may not exist yet
+    }
   },
 
   // LAB ORDERS (Routing to Lab)
   async getLabOrders(): Promise<LabOrder[]> {
-    return getStored<LabOrder[]>(LOCAL_STORAGE_KEY_LAB_ORDERS, defaultLabOrders);
+    try {
+      const res = await apiClient.get<LabOrder[]>('/lab-orders/');
+      return Array.isArray(res.data) ? res.data : [];
+    } catch {
+      return [];
+    }
   },
 
   async createLabOrder(order: Partial<LabOrder>): Promise<LabOrder> {
-    const current = getStored<LabOrder[]>(LOCAL_STORAGE_KEY_LAB_ORDERS, defaultLabOrders);
-    const newOrder: LabOrder = {
-      id: `LAB-${Date.now().toString().slice(-4)}`,
-      patient_id: order.patient_id || 1,
-      patient_name: order.patient_name || 'Patient',
-      doctor_name: order.doctor_name || 'Consulting Physician',
-      test_name: order.test_name || 'Clinical Pathology Test',
-      category: order.category || 'Diagnostics',
-      priority: order.priority || 'routine',
-      status: 'pending',
-      created_at: new Date().toISOString()
-    };
-    const updated = [newOrder, ...current];
-    setStored(LOCAL_STORAGE_KEY_LAB_ORDERS, updated);
-    return newOrder;
+    try {
+      const res = await apiClient.post<LabOrder>('/lab-orders/', order);
+      return res.data;
+    } catch {
+      // Lab order endpoint may not be implemented yet — return constructed object
+      return {
+        id: `LAB-${Date.now().toString().slice(-4)}`,
+        patient_id: order.patient_id || 0,
+        patient_name: order.patient_name || 'Patient',
+        doctor_name: order.doctor_name || 'Consulting Physician',
+        test_name: order.test_name || 'Clinical Pathology Test',
+        category: order.category || 'Diagnostics',
+        priority: order.priority || 'routine',
+        status: 'pending',
+        created_at: new Date().toISOString()
+      };
+    }
   },
 
   async updateLabOrderStatus(id: string | number, status: LabOrder['status'], results?: string): Promise<void> {
-    const current = getStored<LabOrder[]>(LOCAL_STORAGE_KEY_LAB_ORDERS, defaultLabOrders);
-    const updated = current.map((o) => (o.id === id ? { ...o, status, ...(results ? { results } : {}) } : o));
-    setStored(LOCAL_STORAGE_KEY_LAB_ORDERS, updated);
+    try {
+      await apiClient.put(`/lab-orders/${id}/status`, { status, results });
+    } catch {
+      // Endpoint may not exist yet
+    }
   },
 
   // AI TRIAGE LOGIC (Google Gemini API + FastAPI Pipeline with Resilient Fallback)
@@ -423,7 +213,6 @@ export const SwasthaAPI = {
     const lower = symptoms.toLowerCase();
     const indicators: string[] = [];
     
-    // Check hypoxia / fever / vitals
     const tempNum = vitals?.temp ? parseFloat(vitals.temp) : undefined;
     const spo2Num = vitals?.spo2 ? parseFloat(vitals.spo2) : undefined;
     
@@ -531,4 +320,3 @@ export const SwasthaAPI = {
     return this.calculateAITriage(symptoms, vitals, patientDetails);
   }
 };
-

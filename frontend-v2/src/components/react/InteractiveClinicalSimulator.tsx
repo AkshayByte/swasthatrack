@@ -137,7 +137,7 @@ export default function InteractiveClinicalSimulator() {
       <div className="p-4 sm:p-5 bg-slate-50 dark:bg-[#090e1c] border-b border-slate-200 dark:border-slate-800/80">
         <div className="text-xs font-mono text-slate-500 font-semibold mb-2.5 flex items-center justify-between">
           <span>Select Clinical Case to Trace:</span>
-          <span className="text-[11px] text-sky-600 dark:text-sky-400">Interactive live demo</span>
+          <span className="text-[11px] text-sky-600 dark:text-sky-400">Interactive case simulator</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           {CLINICAL_CASES.map((c, idx) => {

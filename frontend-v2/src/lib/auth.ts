@@ -27,6 +27,7 @@ export interface RoleProfile {
   description: string;
 }
 
+// UI lookup table — maps role to display metadata. Does NOT grant access.
 export const CLINICAL_STAFF_PROFILES: Record<ClinicalRole, RoleProfile> = {
   doctor: {
     role: 'doctor',
@@ -126,84 +127,38 @@ export function getCurrentUser(): ClinicalUser | null {
   }
 }
 
-export function quickLoginAsRole(role: ClinicalRole): ClinicalUser {
-  const profile = CLINICAL_STAFF_PROFILES[role];
-  const mockToken = `jwt_mock_${role}_${Date.now()}`;
-  
+export async function loginWithCredentials(email: string, password: string): Promise<ClinicalUser> {
+  if (!email.trim() || !password.trim()) {
+    throw new Error('Email and password are required.');
+  }
+
+  const response = await apiClient.post('/auth/login', { email, password });
+
+  if (!response.data || !response.data.access_token) {
+    throw new Error('Login failed. Invalid server response.');
+  }
+
+  const role = (response.data.role as ClinicalRole) || 'doctor';
+  const profile = CLINICAL_STAFF_PROFILES[role] || CLINICAL_STAFF_PROFILES.doctor;
+
   const user: ClinicalUser = {
-    id: role === 'admin' ? 1 : role === 'doctor' ? 2 : role === 'pharmacist' ? 3 : role === 'lab' ? 4 : 5,
-    name: profile.name,
-    email: profile.email,
-    role: profile.role,
+    id: response.data.user_id || 1,
+    name: response.data.name || profile.name,
+    email: email,
+    role: role,
     staffId: profile.staffId,
     department: profile.department,
     avatarInitials: profile.avatarInitials,
-    token: mockToken,
+    token: response.data.access_token,
     loginTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   };
 
   if (typeof window !== 'undefined') {
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-    localStorage.setItem(TOKEN_STORAGE_KEY, mockToken);
+    localStorage.setItem(TOKEN_STORAGE_KEY, user.token);
   }
   notifyListeners(user);
   return user;
-}
-
-export async function loginWithCredentials(email: string, password: string): Promise<ClinicalUser> {
-  // Check if credentials match any predefined profile
-  const matchedRole = (Object.keys(CLINICAL_STAFF_PROFILES) as ClinicalRole[]).find(
-    (r) => CLINICAL_STAFF_PROFILES[r].email.toLowerCase() === email.toLowerCase().trim()
-  );
-
-  let backendOffline = false;
-
-  try {
-    const response = await apiClient.post('/auth/login', { email, password });
-    if (response.data && response.data.access_token) {
-      const role = (response.data.role as ClinicalRole) || matchedRole || 'doctor';
-      const profile = CLINICAL_STAFF_PROFILES[role] || CLINICAL_STAFF_PROFILES.doctor;
-      const user: ClinicalUser = {
-        id: response.data.user_id || 1,
-        name: response.data.name || profile.name,
-        email: email,
-        role: role,
-        staffId: profile.staffId,
-        department: profile.department,
-        avatarInitials: profile.avatarInitials,
-        token: response.data.access_token,
-        loginTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-        localStorage.setItem(TOKEN_STORAGE_KEY, user.token);
-      }
-      notifyListeners(user);
-      return user;
-    }
-  } catch (e: any) {
-    // If the backend responded with a 4xx error (e.g. 401 wrong password),
-    // do NOT silently fall through — surface the error to the caller.
-    if (e?.response && e.response.status >= 400 && e.response.status < 500) {
-      throw new Error(e.response.data?.detail || 'Invalid credentials. Please check your email and password.');
-    }
-    // Backend is offline (network error, 5xx, timeout) — allow demo fallback below.
-    backendOffline = true;
-    console.warn('Backend unreachable — activating offline demo mode', e);
-  }
-
-  // Offline demo fallback: only proceed if the email matches a known clinical profile.
-  // This prevents random emails from silently gaining access.
-  if (backendOffline && matchedRole) {
-    return quickLoginAsRole(matchedRole);
-  }
-
-  // Backend is offline and email doesn't match any clinical profile — deny access.
-  if (backendOffline) {
-    throw new Error('Backend is unreachable and the provided email does not match a known demo profile.');
-  }
-
-  throw new Error('Login failed. Please try again.');
 }
 
 export function logout(): void {
