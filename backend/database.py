@@ -8,9 +8,11 @@ load_dotenv()
 # Database URL
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./swasthatrack.db")
 
-# SQLAlchemy requires postgresql:// instead of postgres:// (common in Render / Heroku URLs)
+# SQLAlchemy requires postgresql:// or postgresql+psycopg2:// instead of postgres:// (common in Render / Heroku URLs)
 if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+elif DATABASE_URL.startswith("postgresql://") and "+psycopg" not in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 # Create engine with connection pool resilience
 if "sqlite" in DATABASE_URL:

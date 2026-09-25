@@ -30,6 +30,12 @@ async def lifespan(app: FastAPI):
     """Application lifespan handler — replaces deprecated on_event('startup')."""
     logger.info("Starting up SwasthaTrack API...")
     create_tables()
+    try:
+        from seed import seed
+        seed()
+        logger.info("Database initialized and clinical staff accounts verified.")
+    except Exception as e:
+        logger.warning(f"Startup seed notice: {e}")
     yield
     logger.info("SwasthaTrack API shut down.")
 
