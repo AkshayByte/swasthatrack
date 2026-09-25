@@ -96,12 +96,18 @@ if not IS_PRODUCTION:
         logger.info(f"{request.method} {request.url.path} - {response.status_code} - {process_time:.4f}s")
         return response
 
-# Include routers
+# Include routers (supports both with and without /api prefix)
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(medicine.router, prefix="/api/medicine", tags=["medicine"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
 app.include_router(patients.router, prefix="/api/patients", tags=["patients"])
 app.include_router(queue.router, prefix="/api/queue", tags=["queue"])
+
+app.include_router(auth.router, prefix="/auth", tags=["auth-direct"], include_in_schema=False)
+app.include_router(medicine.router, prefix="/medicine", tags=["medicine-direct"], include_in_schema=False)
+app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard-direct"], include_in_schema=False)
+app.include_router(patients.router, prefix="/patients", tags=["patients-direct"], include_in_schema=False)
+app.include_router(queue.router, prefix="/queue", tags=["queue-direct"], include_in_schema=False)
 
 @app.get("/")
 def read_root():

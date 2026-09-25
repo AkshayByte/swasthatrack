@@ -13,7 +13,7 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 30000, // 30s timeout to accommodate cloud container cold starts (Render/Fly)
 });
 
 // Interceptor for token injection

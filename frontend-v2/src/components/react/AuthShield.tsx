@@ -49,8 +49,16 @@ export default function AuthShield({ requiredDepartment, departmentTitle, childr
       const logged = await loginWithCredentials(emailInput, passwordInput);
       setUser(logged);
     } catch (err: any) {
-      const message = err?.message || 'Authentication failed. Please verify credentials.';
-      setLoginError(message);
+      if (err?.code === 'ECONNABORTED' || err?.message?.includes('timeout')) {
+        setLoginError('Server connection timed out (30s). The backend service may be offline or waking up. Please verify your backend server is running and try again.');
+      } else if (err?.response?.data?.detail) {
+        setLoginError(err.response.data.detail);
+      } else if (err?.code === 'ERR_NETWORK' || !err?.response) {
+        setLoginError('Cannot connect to backend server. Please ensure the backend is running at ' + (import.meta.env.PUBLIC_API_BASE_URL || 'http://localhost:8000'));
+      } else {
+        const message = err?.message || 'Authentication failed. Please verify credentials.';
+        setLoginError(message);
+      }
     } finally {
       setIsSubmitting(false);
     }
