@@ -9,10 +9,16 @@ import sys
 # Add backend directory to python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Set testing flag
+os.environ["TESTING"] = "true"
+
 from main import app
 from database import Base, get_db
 from utils.security import get_password_hash
+from utils.limiter import limiter
 from models.user import User
+
+limiter.enabled = False
 
 # Use in-memory SQLite database for tests
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -95,5 +101,59 @@ def admin_token(client, admin_user):
     response = client.post(
         "/api/auth/login",
         json={"email": "admin@example.com", "password": "adminpassword"}
+    )
+    return response.json()["access_token"]
+
+@pytest.fixture
+def doctor_token(client, db_session):
+    """Create a doctor user and return access token."""
+    user = User(
+        email="doctor@example.com",
+        hashed_password=get_password_hash("doctorpassword"),
+        full_name="Dr. Vikram Sethi",
+        role="doctor",
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "doctor@example.com", "password": "doctorpassword"}
+    )
+    return response.json()["access_token"]
+
+@pytest.fixture
+def pharmacist_token(client, db_session):
+    """Create a pharmacist user and return access token."""
+    user = User(
+        email="pharmacist@example.com",
+        hashed_password=get_password_hash("pharmapassword"),
+        full_name="Pharmacist Sunil",
+        role="pharmacist",
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "pharmacist@example.com", "password": "pharmapassword"}
+    )
+    return response.json()["access_token"]
+
+@pytest.fixture
+def lab_token(client, db_session):
+    """Create a lab technician user and return access token."""
+    user = User(
+        email="lab@example.com",
+        hashed_password=get_password_hash("labpassword"),
+        full_name="Lab Tech Meenakshi",
+        role="lab",
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "lab@example.com", "password": "labpassword"}
     )
     return response.json()["access_token"]

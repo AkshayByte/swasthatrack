@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
@@ -10,8 +10,17 @@ from google.auth.transport import requests as google_requests
 
 from database import get_db
 from models.user import User
-from schemas.auth import Token, UserCreate, User as UserSchema, LoginRequest, GoogleAuthRequest
+from schemas.auth import (
+    Token,
+    UserCreate,
+    AdminUserCreate,
+    User as UserSchema,
+    LoginRequest,
+    GoogleAuthRequest,
+    UserRole,
+)
 from utils.security import verify_password, get_password_hash, create_access_token, decode_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from utils.limiter import limiter
 
 router = APIRouter()
 
@@ -37,7 +46,13 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Se
     return user
 
 @router.post("/register", response_model=UserSchema)
-def register(user: UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
+    """
+    Public patient / user registration.
+    Security policy: Self-registration strictly defaults to the 'user' role.
+    Clinical staff accounts can only be provisioned by an authenticated Administrator.
+    """
     db_user = db.query(User).filter(User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -47,18 +62,51 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
         email=user.email,
         hashed_password=hashed_password,
         full_name=user.full_name,
-        role=user.role,
-        is_active=user.is_active
+        role=UserRole.USER.value,
+        is_active=True
     )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
 
+@router.post("/users", response_model=UserSchema, status_code=status.HTTP_201_CREATED)
+def create_staff_user(
+    user_data: AdminUserCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Admin-only endpoint for provisioning clinical staff accounts (Doctor, Pharmacist, Lab, etc.)
+    """
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access restricted. Only hospital administrators can provision clinical staff accounts."
+        )
+
+    db_user = db.query(User).filter(User.email == user_data.email).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Staff email already registered")
+
+    hashed_password = get_password_hash(user_data.password)
+    new_staff = User(
+        email=user_data.email,
+        hashed_password=hashed_password,
+        full_name=user_data.full_name,
+        role=user_data.role.value,
+        is_active=user_data.is_active
+    )
+    db.add(new_staff)
+    db.commit()
+    db.refresh(new_staff)
+    return new_staff
+
 @router.post("/login", response_model=Token)
-async def login(request: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == request.email).first()
-    if not user or not verify_password(request.password, user.hashed_password):
+@limiter.limit("10/minute")
+async def login(request: Request, login_data: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == login_data.email).first()
+    if not user or not verify_password(login_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
@@ -79,7 +127,8 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
     }
 
 @router.post("/google", response_model=Token)
-async def google_login(request: GoogleAuthRequest, db: Session = Depends(get_db)):
+@limiter.limit("15/minute")
+async def google_login(request: Request, auth_req: GoogleAuthRequest, db: Session = Depends(get_db)):
     """
     Verifies a Google ID token from the frontend Google Identity Services SDK,
     creates or finds the associated user, and issues a standard SwasthaTrack JWT.
@@ -90,12 +139,12 @@ async def google_login(request: GoogleAuthRequest, db: Session = Depends(get_db)
         # Verify the Google ID token signature with Google's public certs
         if google_client_id:
             id_info = id_token.verify_oauth2_token(
-                request.credential, google_requests.Request(), google_client_id
+                auth_req.credential, google_requests.Request(), google_client_id
             )
         else:
             # If no client ID configured yet, verify signature against Google's public certs
             id_info = id_token.verify_oauth2_token(
-                request.credential, google_requests.Request()
+                auth_req.credential, google_requests.Request()
             )
     except Exception as e:
         raise HTTPException(
@@ -162,7 +211,8 @@ async def google_login(request: GoogleAuthRequest, db: Session = Depends(get_db)
 
 # OAuth2 compatible token endpoint
 @router.post("/token", response_model=Token)
-async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Session = Depends(get_db)):
+@limiter.limit("15/minute")
+async def login_for_access_token(request: Request, form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(

@@ -8,7 +8,7 @@ class QueueEntry(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False, index=True)
-    queue_number = Column(String(20), nullable=False)
+    queue_number = Column(String(50), nullable=False, index=True)
     service_type = Column(String(50), nullable=False)
     doctor_id = Column(Integer, nullable=True)
     doctor_name = Column(String(100), nullable=True)

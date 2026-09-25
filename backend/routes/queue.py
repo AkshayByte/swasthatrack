@@ -5,7 +5,7 @@ from database import get_db
 from models.queue import QueueEntry as QueueEntryModel
 from models.user import User
 from routes.auth import get_current_user
-from schemas.queue import QueueEntry, QueueEntryCreate, TriageRequest, TriageResponse
+from schemas.queue import QueueEntry, QueueEntryCreate, TriageRequest, TriageResponse, QueueStatus
 from utils.gemini_triage import analyze_clinical_triage
 from datetime import datetime, timezone
 
@@ -35,11 +35,16 @@ def add_to_queue(
     if current_user.role not in ["admin", "registration", "doctor"]:
         raise HTTPException(status_code=403, detail="Not authorized to triage patients to queue")
 
-    # Auto-generate queue number if empty or not provided
+    # Auto-generate queue number if empty or not provided (format: Q-YYYYMMDD-001)
     if not entry.queue_number or entry.queue_number.strip() == "":
         today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_str = today_start.strftime("%Y%m%d")
         count = db.query(QueueEntryModel).filter(QueueEntryModel.created_at >= today_start).count()
-        entry.queue_number = f"Q{(count + 1):03d}"
+        candidate = f"Q-{today_str}-{(count + 1):03d}"
+        while db.query(QueueEntryModel).filter(QueueEntryModel.queue_number == candidate).first() is not None:
+            count += 1
+            candidate = f"Q-{today_str}-{(count + 1):03d}"
+        entry.queue_number = candidate
     
     db_entry = QueueEntryModel(
         patient_id=entry.patient_id,
@@ -92,7 +97,7 @@ def read_queue_entry(
 @router.put("/{entry_id}/status", response_model=QueueEntry)
 def update_queue_status(
     entry_id: int, 
-    status: str, 
+    status: QueueStatus, 
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -103,10 +108,10 @@ def update_queue_status(
     if entry is None:
         raise HTTPException(status_code=404, detail="Queue entry not found")
         
-    entry.status = status
-    if status == "completed":
+    entry.status = status.value
+    if status == QueueStatus.COMPLETED:
         entry.completed_at = datetime.now(timezone.utc)
-    elif status == "in-progress" or status == "called":
+    elif status in [QueueStatus.IN_PROGRESS, QueueStatus.CALLED]:
         entry.called_at = datetime.now(timezone.utc)
         
     db.commit()

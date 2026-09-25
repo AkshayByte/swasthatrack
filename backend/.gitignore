@@ -16,12 +16,14 @@ venv.bak/
 *.swp
 *.swo
 
-# Environment variables
+# Environment variables & Local Credentials
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+local_staff_credentials.md
+*.local.md
 
 # OS
 .DS_Store

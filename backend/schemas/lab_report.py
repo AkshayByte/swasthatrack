@@ -1,29 +1,39 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 
-class LabReportBase(BaseModel):
+
+class LabOrderCreateRequest(BaseModel):
     patient_id: int
+    patient_name: Optional[str] = None
+    doctor_name: Optional[str] = None
+    ordered_by: Optional[str] = None
     test_name: str
-    test_type: str
-    results: Optional[str] = None  # JSON string
-    normal_range: Optional[str] = None
-    status: str = "pending"
-    ordered_by: str
+    category: Optional[str] = "General"
+    test_type: Optional[str] = None
+    priority: Optional[str] = "routine"
+    status: Optional[str] = "pending"
     notes: Optional[str] = None
-    file_url: Optional[str] = None
-    priority: str = "normal"
-    estimated_completion: Optional[datetime] = None
 
-class LabReportCreate(LabReportBase):
-    pass
 
-class LabReport(LabReportBase):
+class LabOrderStatusUpdate(BaseModel):
+    status: str
+    results: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class LabOrderResponse(BaseModel):
     id: int
-    ordered_at: datetime
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    patient_id: int
+    patient_name: Optional[str] = None
+    doctor_name: Optional[str] = None
+    test_name: str
+    category: str
+    priority: str
+    status: str
+    results: Optional[str] = None
+    notes: Optional[str] = None
     created_at: datetime
-    updated_at: datetime
+    ordered_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)

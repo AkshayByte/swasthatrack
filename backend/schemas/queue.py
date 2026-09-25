@@ -1,7 +1,16 @@
+from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 from typing import Optional, List
 from schemas.patient import Patient
+
+class QueueStatus(str, Enum):
+    WAITING = "waiting"
+    CALLED = "called"
+    IN_PROGRESS = "in-progress"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+    NO_SHOW = "no-show"
 
 class QueueEntryBase(BaseModel):
     patient_id: int
@@ -10,7 +19,7 @@ class QueueEntryBase(BaseModel):
     doctor_id: Optional[int] = None
     doctor_name: Optional[str] = None
     priority: str = "normal"
-    status: str = "waiting"
+    status: QueueStatus = QueueStatus.WAITING
     estimated_wait_time: int = 0
     notes: Optional[str] = None
 

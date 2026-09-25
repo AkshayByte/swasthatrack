@@ -1,23 +1,42 @@
 from pydantic import BaseModel, ConfigDict, Field
-from datetime import datetime
-from typing import Optional
+from datetime import datetime, timezone, timedelta
+from typing import Optional, List, Any, Union
 
-class PrescriptionBase(BaseModel):
-    patient_id: int
-    medicines: str  # JSON string
+
+class MedicineItem(BaseModel):
+    name: str
+    dosage: Optional[str] = None
+    frequency: Optional[str] = None
+    duration: Optional[str] = None
     instructions: Optional[str] = None
-    prescribed_by: str
-    valid_until: datetime
-    status: str = "active"
+
+
+class PrescriptionCreateRequest(BaseModel):
+    patient_id: int
+    patient_name: Optional[str] = None
+    doctor_name: Optional[str] = None
+    prescribed_by: Optional[str] = None
+    medicines: Union[List[MedicineItem], List[dict], str]
+    instructions: Optional[str] = None
+    valid_until: Optional[datetime] = None
+    status: str = "pending"
     notes: Optional[str] = None
 
-class PrescriptionCreate(PrescriptionBase):
-    pass
 
-class Prescription(PrescriptionBase):
+class PrescriptionStatusUpdate(BaseModel):
+    status: str
+
+
+class PrescriptionResponse(BaseModel):
     id: int
-    prescribed_at: datetime
+    patient_id: int
+    patient_name: Optional[str] = None
+    doctor_name: Optional[str] = None
+    medicines: List[Any] = []
+    instructions: Optional[str] = None
+    status: str
+    notes: Optional[str] = None
     created_at: datetime
-    updated_at: datetime
+    valid_until: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)

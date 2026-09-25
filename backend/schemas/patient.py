@@ -8,8 +8,8 @@ class PatientBase(BaseModel):
     gender: str = Field(..., pattern="^(Male|Female|Other)$")
     phone: str = Field(..., pattern=r"^\+?[0-9]{10,15}$")
     email: Optional[EmailStr] = None
-    address: str
-    emergency_contact: str = Field(..., pattern=r"^\+?[0-9]{10,15}$")
+    address: Optional[str] = None
+    emergency_contact: Optional[str] = None
     blood_group: Optional[str] = Field(None, pattern="^(A|B|AB|O)[+-]$")
     allergies: Optional[List[str]] = []
     medical_history: Optional[List[str]] = []

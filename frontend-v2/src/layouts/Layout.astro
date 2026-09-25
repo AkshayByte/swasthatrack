@@ -133,16 +133,20 @@ const navLinks = [
           <!-- Staff auth -->
           <StaffAuthButton client:load />
 
-          <!-- Dashboard CTA -->
-          <a
-            href="/dashboard"
-            class="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-semibold rounded-lg text-white bg-sky-600 hover:bg-sky-700 transition-colors shadow-sm"
-          >
-            Open Dashboard
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-          </a>
+          <!-- Dashboard CTA (hidden when already on dashboard) -->
+          {
+            !currentPath.startsWith('/dashboard') && (
+              <a
+                href="/dashboard"
+                class="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-semibold rounded-lg text-white bg-sky-600 hover:bg-sky-700 transition-colors shadow-sm"
+              >
+                Open Dashboard
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+              </a>
+            )
+          }
         </div>
       </div>
     </header>

@@ -34,3 +34,46 @@ def test_patient_delete_non_admin_forbidden(client: TestClient, token: str):
         headers={"Authorization": f"Bearer {token}"}
     )
     assert response.status_code == 403
+
+def test_queue_auto_number_generation(client: TestClient, admin_token: str, db_session: Session):
+    from models.patient import Patient
+    patient = Patient(name="Test Patient", age=30, gender="Male", phone="9999999999", registration_number="REG-TEST-001")
+    db_session.add(patient)
+    db_session.commit()
+    db_session.refresh(patient)
+
+    res1 = client.post(
+        "/api/queue/",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "patient_id": patient.id,
+            "service_type": "General OPD",
+            "priority": "normal",
+            "queue_number": ""
+        }
+    )
+    assert res1.status_code == 201
+    q1 = res1.json()["queue_number"]
+    assert q1.startswith("Q-")
+
+    res2 = client.post(
+        "/api/queue/",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "patient_id": patient.id,
+            "service_type": "General OPD",
+            "priority": "normal",
+            "queue_number": ""
+        }
+    )
+    assert res2.status_code == 201
+    q2 = res2.json()["queue_number"]
+    assert q2.startswith("Q-")
+    assert q1 != q2
+
+def test_queue_invalid_status_transition_rejected(client: TestClient, admin_token: str):
+    res = client.put(
+        "/api/queue/1/status?status=invalid_bogus_status",
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    assert res.status_code == 422
