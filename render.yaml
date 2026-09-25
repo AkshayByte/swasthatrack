@@ -33,6 +33,11 @@ services:
         value: "60"
       - key: ALLOWED_ORIGINS
         value: "https://swasthatrack.vercel.app"  # Update after Vercel deploy
+      # Google OAuth
+      - key: GOOGLE_CLIENT_ID
+        value: "83227092467-e04krla6f1j9o8crv6qkmjdm4tobi30m.apps.googleusercontent.com"
+      - key: SUPERADMIN_EMAILS
+        value: "akshayislesnar@gmail.com"
       # AI Triage — set manually in Render dashboard (secret)
       - key: GEMINI_API_KEY
         sync: false  # must be set manually in dashboard
