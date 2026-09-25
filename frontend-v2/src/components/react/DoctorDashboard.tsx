@@ -10,15 +10,15 @@ import {
 } from '../../lib/ui';
 
 const fallbackPatients: Patient[] = [
-  { id: 1, registration_number: 'PAT-2026-001', name: 'Rajesh Sharma', age: 45, gender: 'Male', phone: '+91 98765 43210', blood_group: 'B+', allergies: ['Penicillin', 'Sulfa Drugs'], chronic_conditions: ['Hypertension', 'Mild Asthma'], emergency_contact: 'Sunita Sharma (+91 98765 43211)', created_at: new Date().toISOString() },
-  { id: 2, registration_number: 'PAT-2026-002', name: 'Anita Patel', age: 32, gender: 'Female', phone: '+91 98111 22334', blood_group: 'O+', allergies: [], chronic_conditions: ['Type-2 Diabetes'], emergency_contact: 'Karan Patel (+91 98111 22335)', created_at: new Date().toISOString() },
-  { id: 3, registration_number: 'PAT-2026-003', name: 'Mohan Lal Verma', age: 58, gender: 'Male', phone: '+91 97222 33445', blood_group: 'A+', allergies: ['Aspirin'], chronic_conditions: ['Ischemic Heart Disease'], emergency_contact: 'Ramesh Verma (+91 97222 33446)', created_at: new Date().toISOString() },
+  { id: 1, registration_number: 'PAT-2026-001', name: 'Rajesh Sharma', age: 45, gender: 'Male', phone: '+91 98765 43210', blood_group: 'B+', allergies: ['Penicillin', 'Sulfa Drugs'], chronic_conditions: ['Hypertension', 'Mild Asthma'], emergency_contact: 'Sunita Sharma (+91 98765 43211)', status: 'active', created_at: new Date().toISOString() },
+  { id: 2, registration_number: 'PAT-2026-002', name: 'Anita Patel', age: 32, gender: 'Female', phone: '+91 98111 22334', blood_group: 'O+', allergies: [], chronic_conditions: ['Type-2 Diabetes'], emergency_contact: 'Karan Patel (+91 98111 22335)', status: 'active', created_at: new Date().toISOString() },
+  { id: 3, registration_number: 'PAT-2026-003', name: 'Mohan Lal Verma', age: 58, gender: 'Male', phone: '+91 97222 33445', blood_group: 'A+', allergies: ['Aspirin'], chronic_conditions: ['Ischemic Heart Disease'], emergency_contact: 'Ramesh Verma (+91 97222 33446)', status: 'active', created_at: new Date().toISOString() },
 ];
 
 const fallbackQueue: QueueEntry[] = [
-  { id: 101, patient_id: 1, patient_name: 'Rajesh Sharma', service_type: 'Cardiology OPD', priority: 'high', status: 'in-consultation', queue_number: 'Q-101', notes: 'Substernal chest tightness radiating to left shoulder on exertion', created_at: new Date().toISOString() },
-  { id: 102, patient_id: 2, patient_name: 'Anita Patel', service_type: 'Endocrinology OPD', priority: 'medium', status: 'waiting', queue_number: 'Q-102', notes: 'Elevated fasting blood sugar (164 mg/dL), polyuria and fatigue', created_at: new Date().toISOString() },
-  { id: 103, patient_id: 3, patient_name: 'Mohan Lal Verma', service_type: 'General Medicine', priority: 'emergency', status: 'waiting', queue_number: 'Q-103', notes: 'Severe dizziness, BP 170/105 mmHg, blurred vision', created_at: new Date().toISOString() },
+  { id: 101, patient_id: 1, patient_name: 'Rajesh Sharma', service_type: 'Cardiology OPD', priority: 'high', status: 'in-consultation', queue_number: 'Q-101', estimated_wait_time: 15, notes: 'Substernal chest tightness radiating to left shoulder on exertion', created_at: new Date().toISOString() },
+  { id: 102, patient_id: 2, patient_name: 'Anita Patel', service_type: 'Endocrinology OPD', priority: 'medium', status: 'waiting', queue_number: 'Q-102', estimated_wait_time: 25, notes: 'Elevated fasting blood sugar (164 mg/dL), polyuria and fatigue', created_at: new Date().toISOString() },
+  { id: 103, patient_id: 3, patient_name: 'Mohan Lal Verma', service_type: 'General Medicine', priority: 'emergency', status: 'waiting', queue_number: 'Q-103', estimated_wait_time: 0, notes: 'Severe dizziness, BP 170/105 mmHg, blurred vision', created_at: new Date().toISOString() },
 ];
 
 export default function DoctorDashboard() {
