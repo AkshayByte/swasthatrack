@@ -75,9 +75,30 @@ export default function DoctorDashboard() {
   const handleSendPrescription = async () => {
     if (!selectedPatient || prescribedMeds.length === 0) return;
     try {
-      await SwasthaAPI.createPrescription({ patient_id: selectedPatient.id, patient_name: selectedPatient.name, doctor_name: 'Dr. Vikram Sethi, MD', medicines: prescribedMeds, notes: diagnosis });
-    } catch {}
-    setNotification(`Prescription for ${selectedPatient.name} sent to Central Pharmacy.`);
+      await SwasthaAPI.createPrescription({
+        patient_id: selectedPatient.id,
+        patient_name: selectedPatient.name,
+        doctor_name: 'Dr. Vikram Sethi, MD',
+        medicines: prescribedMeds,
+        notes: diagnosis,
+      });
+
+      if (selectedQueueItem) {
+        await SwasthaAPI.updateQueueStatus(selectedQueueItem.id, 'completed');
+        // Remove completed patient from doctor's active waiting queue
+        setQueue((prev) => {
+          const remaining = prev.filter((q) => q.id !== selectedQueueItem.id);
+          if (remaining.length > 0) {
+            setSelectedQueueItem(remaining[0]);
+            setSelectedPatient(patients.find((p) => p.id === remaining[0].patient_id) || patients[0]);
+          }
+          return remaining;
+        });
+      }
+    } catch (err) {
+      console.error('Error completing consultation:', err);
+    }
+    setNotification(`Prescription for ${selectedPatient.name} sent to Central Pharmacy & consultation completed.`);
     setTimeout(() => setNotification(''), 5000);
   };
 
