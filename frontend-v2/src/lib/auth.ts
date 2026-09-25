@@ -161,6 +161,49 @@ export async function loginWithCredentials(email: string, password: string): Pro
   return user;
 }
 
+export async function loginWithGoogle(credential: string): Promise<ClinicalUser> {
+  if (!credential) {
+    throw new Error('Google credential token is missing.');
+  }
+
+  const response = await apiClient.post('/auth/google', { credential });
+
+  if (!response.data || !response.data.access_token) {
+    throw new Error('Google authentication failed on server.');
+  }
+
+  const role = (response.data.role as ClinicalRole) || 'registration';
+  const profile = CLINICAL_STAFF_PROFILES[role] || CLINICAL_STAFF_PROFILES.registration;
+
+  const userName = response.data.name || 'Google User';
+  const avatarInitials = userName
+    .split(' ')
+    .filter(Boolean)
+    .map((n: string) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || 'GU';
+
+  const user: ClinicalUser = {
+    id: response.data.user_id || 1,
+    name: userName,
+    email: '',
+    role: role,
+    staffId: profile.staffId || `ST-GGL-${response.data.user_id || '01'}`,
+    department: profile.department || 'Clinical Services',
+    avatarInitials: avatarInitials,
+    token: response.data.access_token,
+    loginTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  };
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    localStorage.setItem(TOKEN_STORAGE_KEY, user.token);
+  }
+  notifyListeners(user);
+  return user;
+}
+
 export function logout(): void {
   if (typeof window !== 'undefined') {
     localStorage.removeItem(AUTH_STORAGE_KEY);

@@ -9,6 +9,7 @@ import {
   type ClinicalUser,
   type ClinicalRole,
 } from '../../lib/auth';
+import GoogleSignInButton from './GoogleSignInButton';
 
 interface AuthShieldProps {
   requiredDepartment?: string;
@@ -125,6 +126,23 @@ export default function AuthShield({ requiredDepartment, departmentTitle, childr
               {isSubmitting ? 'Authenticating...' : 'Sign In'}
             </button>
           </form>
+
+          {/* Social Auth Divider */}
+          <div className="my-5 flex items-center gap-3">
+            <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+            <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              Or
+            </span>
+            <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+          </div>
+
+          {/* Google Sign-In */}
+          <GoogleSignInButton
+            onSuccess={() => {
+              const current = getCurrentUser();
+              if (current) setUser(current);
+            }}
+          />
 
           <div className="mt-5 pt-4 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
             <svg className="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -4,9 +4,13 @@ from sqlalchemy.orm import Session
 from datetime import timedelta
 from typing import Annotated
 
+import os
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+
 from database import get_db
 from models.user import User
-from schemas.auth import Token, UserCreate, User as UserSchema, LoginRequest
+from schemas.auth import Token, UserCreate, User as UserSchema, LoginRequest, GoogleAuthRequest
 from utils.security import verify_password, get_password_hash, create_access_token, decode_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 
 router = APIRouter()
@@ -66,6 +70,86 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
         data={"user_id": user.id, "role": user.role, "sub": user.email}, expires_delta=access_token_expires
     )
     
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "role": user.role,
+        "user_id": user.id,
+        "name": user.full_name or user.email
+    }
+
+@router.post("/google", response_model=Token)
+async def google_login(request: GoogleAuthRequest, db: Session = Depends(get_db)):
+    """
+    Verifies a Google ID token from the frontend Google Identity Services SDK,
+    creates or finds the associated user, and issues a standard SwasthaTrack JWT.
+    """
+    google_client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+    
+    try:
+        # Verify the Google ID token signature with Google's public certs
+        if google_client_id:
+            id_info = id_token.verify_oauth2_token(
+                request.credential, google_requests.Request(), google_client_id
+            )
+        else:
+            # If no client ID configured yet, verify signature against Google's public certs
+            id_info = id_token.verify_oauth2_token(
+                request.credential, google_requests.Request()
+            )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid Google ID token: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    email = id_info.get("email")
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Google account did not provide an email address."
+        )
+
+    name = id_info.get("name") or email.split("@")[0]
+    
+    # Check if this email is designated as a SuperAdmin
+    superadmin_raw = os.getenv("SUPERADMIN_EMAILS", "")
+    superadmin_emails = [e.strip().lower() for e in superadmin_raw.split(",") if e.strip()]
+    
+    # Look up existing user
+    user = db.query(User).filter(User.email == email.lower()).first()
+    if not user:
+        # Automatically assign admin if in SUPERADMIN_EMAILS, otherwise registration role
+        assigned_role = "admin" if email.lower() in superadmin_emails else "registration"
+        user = User(
+            email=email.lower(),
+            hashed_password=get_password_hash("OAuth_Google_Managed_" + email.lower()),
+            full_name=name,
+            role=assigned_role,
+            is_active=True
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    elif email.lower() in superadmin_emails and user.role != "admin":
+        # Upgrade existing user to admin if in superadmin list
+        user.role = "admin"
+        db.commit()
+        db.refresh(user)
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is deactivated. Please contact hospital administrator."
+        )
+
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"user_id": user.id, "role": user.role, "sub": user.email},
+        expires_delta=access_token_expires
+    )
+
     return {
         "access_token": access_token,
         "token_type": "bearer",

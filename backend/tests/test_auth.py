@@ -74,3 +74,11 @@ def test_get_current_user_invalid_token(client: TestClient):
         headers={"Authorization": "Bearer invalidtoken"}
     )
     assert response.status_code == 401
+
+def test_google_login_invalid_token(client: TestClient):
+    response = client.post(
+        "/api/auth/google",
+        json={"credential": "invalid_fake_jwt_token"}
+    )
+    assert response.status_code == 401
+    assert "Invalid Google ID token" in response.json()["detail"]

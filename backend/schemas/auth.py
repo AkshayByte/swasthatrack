@@ -17,6 +17,9 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+class GoogleAuthRequest(BaseModel):
+    credential: str
+
 class UserBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
