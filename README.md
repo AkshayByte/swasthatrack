@@ -17,11 +17,12 @@ SwasthaTrack is an enterprise-grade Hospital Management Information System (HMIS
 1. [System Architecture](#-system-architecture)
 2. [End-to-End Clinical Workflow](#-end-to-end-clinical-workflow)
 3. [AI Clinical Triage Engine & Quantification](#-ai-clinical-triage-engine--quantification)
-4. [Technology Stack & Architectural Rationale](#-technology-stack--architectural-rationale)
-5. [Infrastructure, Containerization & CI/CD](#-infrastructure-containerization--cicd)
-6. [Cloud Deployment Guide](#-cloud-deployment-guide)
-7. [Comprehensive Technical Interview Guide & Q/A](#-comprehensive-technical-interview-guide--qa)
-8. [Local Development & Testing](#-local-development--testing)
+4. [Security, Governance & Production Hardening](#-security-governance--production-hardening)
+5. [Technology Stack & Architectural Rationale](#-technology-stack--architectural-rationale)
+6. [Infrastructure, Containerization & CI/CD](#-infrastructure-containerization--cicd)
+7. [Cloud Deployment Guide](#-cloud-deployment-guide)
+8. [Comprehensive Technical Interview Guide & Q/A](#-comprehensive-technical-interview-guide--qa)
+9. [Local Development & Testing](#-local-development--testing)
 
 ---
 
@@ -32,23 +33,25 @@ SwasthaTrack utilizes a modern decoupled architecture:
 - **Backend**: Asynchronous FastAPI service running in a multi-stage **Docker** container behind **Gunicorn (Uvicorn Workers)** on **Render**.
 - **Database**: Managed **PostgreSQL** with connection pooling (`pool_pre_ping=True`) and **Alembic** schema migrations.
 - **AI Intelligence**: **Google Gemini 1.5 Flash** integrated asynchronously with a deterministic clinical heuristic fallback (Emergency Severity Index + Shock Index calculation).
+- **Security & Rate Limiting**: Zero-trust RBAC with **SlowAPI** rate limiting, **Google Identity Services (OAuth 2.0)**, and SuperAdmin email elevation.
 
 ```mermaid
 graph TD
     User["Clinical Staff / Patient Browser"] -->|"HTTPS / Edge CDN"| Vercel["Vercel Edge (Astro + React Islands)"]
-    User -->|"REST API / Bearer JWT"| Render["Render Web Service (FastAPI + Gunicorn ASGI)"]
+    User -->|"REST API / Bearer JWT & Google OAuth"| Render["Render Web Service (FastAPI + Gunicorn ASGI)"]
     
     subgraph "Render Cloud Ecosystem"
         Render -->|"SQLAlchemy Connection Pool"| Postgres[("Managed PostgreSQL Database")]
         Render -->|"Async REST Call (timeout: 10s)"| Gemini["Google Gemini 1.5 Flash API"]
         Render -->|"Deterministic Fallback"| ESI["Heuristic ESI & Shock Index Engine"]
+        Render -->|"SlowAPI Protection"| RateLimit["Rate Limiting & Threat Shield"]
     end
 
     subgraph "CI/CD Pipeline"
         GitHub["GitHub Repository (main)"] -->|"git push"| GHA["GitHub Actions CI"]
-        GHA -->|"Lint & Pytest (24 Tests)"| TestPass["Automated Test Verification"]
+        GHA -->|"Lint & Pytest (37 Tests)"| TestPass["Automated Test Verification"]
         TestPass -->|"Webhook Auto-Deploy"| Render
-        TestPass -->|"Edge Auto-Deploy"| Vercel
+        TestPass -->|"Edge Auto-Deploy (12 Pages)"| Vercel
     end
 ```
 
@@ -135,6 +138,57 @@ $$\text{Shock Index (SI)} = \frac{\text{Heart Rate (BPM)}}{\text{Systolic Blood 
 
 ---
 
+## 🛡️ Security, Governance & Production Hardening
+
+SwasthaTrack adheres to enterprise-grade clinical data integrity and threat mitigation principles:
+
+### 1. Zero-Trust Role-Based Access Control (RBAC)
+- **Synchronized Role Typing**: `UserRole` enum (`admin`, `doctor`, `pharmacist`, `lab`, `registration`, `user`) strictly enforced across SQLAlchemy models and Pydantic schemas.
+- **Privilege Escalation Guard**: Public self-registration (`POST /api/auth/register`) strictly hardcodes `role = user`. Any client-injected role payload is stripped.
+- **Admin Provisioning**: Clinical staff accounts (`doctor`, `pharmacist`, `lab`) can only be provisioned through the protected `POST /api/auth/users` endpoint requiring an authenticated `admin` JWT.
+
+### 2. Google OAuth 2.0 & SuperAdmin Automatic Elevation
+- Built with **Google Identity Services (GSI)** SDK.
+- Server-side token validation verifies Google's cryptographic RSA signatures against Google's public JWKS certificates.
+- Configurable `SUPERADMIN_EMAILS` whitelist automatically provisions or upgrades authenticated owner accounts to SuperAdmin status without exposing static passwords.
+
+### 3. Core Clinical Routers (Dual-Mounted)
+- **Prescriptions Engine** (`/api/prescriptions/` & `/prescriptions/`):
+  - `POST /`: Doctor issues structured digital prescription (drug, dosage, frequency, duration).
+  - `PUT /{id}/status`: Pharmacist dispenses prescription and updates live inventory.
+  - `GET /patient/{id}`: Longitudinal patient prescription history.
+- **Lab Requisitions Engine** (`/api/lab-orders/` & `/lab-orders/`):
+  - `POST /`: Doctor requests diagnostic lab tests.
+  - `PUT /{id}/status`: Lab technician updates specimen collection status and publishes quantitative test results.
+
+### 4. Queue Concurrency & Integrity Protection
+- **Date-Prefixed Tokens**: Tokens are generated in `Q-YYYYMMDD-001` format, preventing token collision across consecutive hospital operating dates.
+- **Concurrency Loop**: Uses database-level collision detection loops to resolve race conditions between concurrent triage reception desks.
+- **State Transition Guard**: `PUT /api/queue/{id}/status` strictly validates transitions via `QueueStatus(str, Enum)` (`waiting`, `called`, `in-progress`, `completed`, `cancelled`, `no-show`). Invalid status transitions return HTTP 422.
+
+### 5. SlowAPI Rate Limiting & Abuse Prevention
+- Integrated **SlowAPI** middleware to safeguard against credential stuffing, brute force, and DDoS attacks.
+- Configured limits:
+  - `POST /api/auth/login`: **10 requests / minute**
+  - `POST /api/auth/register`: **10 requests / minute**
+  - `POST /api/auth/token`: **15 requests / minute**
+  - `POST /api/auth/google`: **15 requests / minute**
+- Exceeding thresholds returns a standardized `429 Too Many Requests` response.
+
+### 6. Strict Origin CORS Whitelist
+- Eliminated permissive regex wildcards (`https?://.*`).
+- Defaults to trusted origins (`https://swasthatrack.vercel.app`, `http://localhost:4321`, `3000`, `5173`), with restricted regex allowing only official Vercel preview environments (`https://*.vercel.app`).
+
+### 7. Clinical Decision Support System (CDSS) Advisory Notice
+- To comply with clinical software regulations and mitigate medico-legal liability, AI triage outputs and risk indicators are accompanied by explicit advisory disclaimers:
+  > *"Clinical Decision Support Notice: AI Triage acuity scoring and diagnostic risk indicators are advisory recommendations designed to assist triage prioritizing. They do not constitute diagnostic determinations and must never supersede clinical judgment by licensed medical professionals."*
+
+### 8. Production Database Safeguard
+- In `production`, automated sample seeding is skipped unless explicitly enabled via `SEED_SAMPLE_DATA="true"`.
+- Clinical testing credentials remain in an untracked, Git-ignored private file on the local machine (`backend/local_staff_credentials.md`).
+
+---
+
 ## 🛠 Technology Stack & Architectural Rationale
 
 ### Why Render + PostgreSQL for Backend?
@@ -167,7 +221,7 @@ $$\text{Shock Index (SI)} = \frac{\text{Heart Rate (BPM)}}{\text{Systolic Blood 
 
 ### Continuous Integration Pipeline
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) triggers on every push and PR to `main`:
-- **Backend Test Job**: Sets up Python 3.12, installs dependencies, and runs **all 24 pytest unit tests**.
+- **Backend Test Job**: Sets up Python 3.12, installs dependencies, and runs **all 37 pytest unit tests** covering auth, AI triage, patient intake, concurrency-safe queues, prescriptions, and lab orders.
 - **Frontend Build Job**: Sets up Node.js 20, builds Astro static output (12 pages), verifies TypeScript types and generates XML sitemaps.
 
 ---
@@ -292,8 +346,12 @@ python seed.py             # Seeds initial clinical staff accounts
 uvicorn main:app --reload --port 8000
 ```
 
-#### Clinical Staff Credentials (Post-Seed)
-| Role | Email | Password | Console Access |
+#### Clinical Staff Credentials (Local Development & Testing Only)
+> [!IMPORTANT]
+> **Production vs. Development Authentication**:  
+> In local development, running `python seed.py` populates baseline testing accounts for all 5 clinical consoles. In production, password-based staff provisioning is restricted to authenticated Administrators via `POST /api/auth/users`, and SuperAdmin elevation is managed securely via Google OAuth (`SUPERADMIN_EMAILS`).
+
+| Role | Demo Email | Demo Password | Console Access |
 |---|---|---|---|
 | **Admin** | `admin@swasthatrack.org` | `Admin@1234` | Full System Access |
 | **Doctor** | `doctor@swasthatrack.org` | `Doctor@1234` | Doctor Consultation |
@@ -319,11 +377,11 @@ npm run dev
 
 ### 🧪 Running Test Suites
 ```bash
-# Run backend pytest suite (24 tests)
+# Run backend pytest suite (37 tests across all subsystems)
 cd backend
 python -m pytest
 
-# Run frontend production build verification
+# Run frontend production build verification (12 static pages)
 cd frontend-v2
 npm run build
 ```
