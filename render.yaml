@@ -36,7 +36,7 @@ services:
       - key: GEMINI_API_KEY
         sync: false  # must be set manually in dashboard
       - key: GEMINI_MODEL
-        value: "gemini-1.5-flash"
+        value: "gemini-3.8-flash"
       # Gunicorn
       - key: WEB_CONCURRENCY
         value: "2"  # Free tier has limited RAM; keep workers low

@@ -82,7 +82,7 @@ export default function DoctorDashboard() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedQueueItem, selectedPatient]);
+  }, []);
 
   const handleSelectPatient = (item: QueueEntry) => {
     setSelectedQueueItem(item);

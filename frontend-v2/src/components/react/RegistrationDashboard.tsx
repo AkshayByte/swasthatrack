@@ -44,7 +44,28 @@ export default function RegistrationDashboard() {
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  // Initial load + 10-second polling (paused when tab is hidden)
+  useEffect(() => {
+    loadData();
+
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        loadData();
+      }
+    }, 10000);
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadData();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   useEffect(() => {
     if (symptoms.trim().length > 3) {
