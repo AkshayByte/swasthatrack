@@ -27,7 +27,7 @@ router = APIRouter()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Session = Depends(get_db)):
+def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -111,7 +111,7 @@ def create_staff_user(
 
 @router.post("/login", response_model=Token)
 @limiter.limit("10/minute")
-async def login(request: Request, login_data: LoginRequest, db: Session = Depends(get_db)):
+def login(request: Request, login_data: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == login_data.email).first()
     if not user or not verify_password(login_data.password, user.hashed_password):
         raise HTTPException(
@@ -141,7 +141,7 @@ async def login(request: Request, login_data: LoginRequest, db: Session = Depend
 
 @router.post("/google", response_model=Token)
 @limiter.limit("15/minute")
-async def google_login(request: Request, auth_req: GoogleAuthRequest, db: Session = Depends(get_db)):
+def google_login(request: Request, auth_req: GoogleAuthRequest, db: Session = Depends(get_db)):
     """
     Verifies a Google ID token from the frontend Google Identity Services SDK,
     creates or finds the associated user, and issues a standard SwasthaTrack JWT.
@@ -237,7 +237,7 @@ async def google_login(request: Request, auth_req: GoogleAuthRequest, db: Sessio
 # OAuth2 compatible token endpoint
 @router.post("/token", response_model=Token)
 @limiter.limit("15/minute")
-async def login_for_access_token(request: Request, form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Session = Depends(get_db)):
+def login_for_access_token(request: Request, form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
