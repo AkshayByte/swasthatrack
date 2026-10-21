@@ -21,12 +21,14 @@ if "sqlite" in DATABASE_URL:
         connect_args={"check_same_thread": False}
     )
 else:
+    # Require SSL/TLS for all non-local (production/cloud) database connections
     engine = create_engine(
         DATABASE_URL,
         pool_size=10,
         max_overflow=20,
         pool_pre_ping=True,  # Automatically reconnect dropped cloud database connections
-        pool_recycle=300
+        pool_recycle=300,
+        connect_args={"sslmode": "require"},  # Enforce encrypted transport for hosted DBs
     )
 
 # Create session

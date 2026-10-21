@@ -9,5 +9,9 @@
     "dev": "npm --prefix frontend-v2 run dev & python -m uvicorn backend.main:app --reload --port 8000",
     "build": "npm --prefix frontend-v2 run build",
     "test:backend": "cd backend && python -m pytest"
+  },
+  "dependencies": {
+    "@neon/config": "^1.9.3",
+    "@neon/env": "^1.6.4"
   }
 }

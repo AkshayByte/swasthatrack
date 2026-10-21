@@ -2,12 +2,8 @@
 # Deploy with: Dashboard > New > Blueprint > Connect your GitHub repo
 # Docs: https://docs.render.com/blueprint-spec
 
-databases:
-  - name: swasthatrack-db
-    plan: free  # 1 GB, 90-day limit on free; upgrade to starter ($7/mo) for permanent
-    databaseName: swasthatrack
-    user: swasthatrack_user
-    region: singapore  # closest to India
+# Databases are now provisioned externally (e.g. Neon). DATABASE_URL is set
+# manually in the Render dashboard.
 
 services:
   - type: web
@@ -19,11 +15,9 @@ services:
     plan: free  # 512 MB RAM, shared CPU
     healthCheckPath: /health
     envVars:
-      # Database — auto-populated from the database defined above
+      # Database — set manually in Render dashboard (external provider, e.g. Neon)
       - key: DATABASE_URL
-        fromDatabase:
-          name: swasthatrack-db
-          property: connectionString
+        sync: false  # must be set manually in dashboard
       # App config
       - key: ENVIRONMENT
         value: production

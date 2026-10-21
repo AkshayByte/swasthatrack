@@ -5,6 +5,7 @@ from datetime import timedelta
 from typing import Annotated
 
 import os
+import secrets
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
@@ -160,6 +161,13 @@ async def google_login(request: Request, auth_req: GoogleAuthRequest, db: Sessio
             detail="Google account did not provide an email address."
         )
 
+    if not id_info.get("email_verified"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Google account email is not verified.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     name = id_info.get("name") or email.split("@")[0]
     
     # Check if this email is designated as a SuperAdmin (falls back to project owner email)
@@ -175,7 +183,7 @@ async def google_login(request: Request, auth_req: GoogleAuthRequest, db: Sessio
         assigned_role = UserRole.ADMIN.value if email.lower() in superadmin_emails else UserRole.USER.value
         user = User(
             email=email.lower(),
-            hashed_password=get_password_hash("OAuth_Google_Managed_" + email.lower()),
+            hashed_password=get_password_hash(secrets.token_urlsafe(32)),
             full_name=name,
             role=assigned_role,
             is_active=True
