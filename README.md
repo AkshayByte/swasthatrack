@@ -32,7 +32,7 @@ SwasthaTrack utilizes a modern decoupled architecture:
 - **Frontend**: Astro MPA with React Islands deployed to **Vercel Edge CDN** for lightning-fast sub-100ms first paint and minimal client bundle size.
 - **Backend**: Asynchronous FastAPI service running in a multi-stage **Docker** container behind **Gunicorn (Uvicorn Workers)** on **Render**.
 - **Database**: Managed **PostgreSQL** with connection pooling (`pool_pre_ping=True`) and **Alembic** schema migrations.
-- **AI Intelligence**: **Google Gemini 1.5 Flash** integrated asynchronously with a deterministic clinical heuristic fallback (Emergency Severity Index + Shock Index calculation).
+- **AI Intelligence**: **Google Gemini** (configurable via `GEMINI_MODEL` env var, recommended: `gemini-3.8-flash`) integrated asynchronously with a deterministic clinical heuristic fallback engine (Emergency Severity Index + Shock Index calculation + pediatric age bands).
 - **Security & Rate Limiting**: Zero-trust RBAC with **SlowAPI** rate limiting, **Google Identity Services (OAuth 2.0)**, and SuperAdmin email elevation.
 
 ```mermaid
@@ -42,7 +42,7 @@ graph TD
     
     subgraph "Render Cloud Ecosystem"
         Render -->|"SQLAlchemy Connection Pool"| Postgres[("Managed PostgreSQL Database")]
-        Render -->|"Async REST Call (timeout: 10s)"| Gemini["Google Gemini 1.5 Flash API"]
+        Render -->|"Async REST Call (timeout: 3s)"| Gemini["Google Gemini API (configurable model)"]
         Render -->|"Deterministic Fallback"| ESI["Heuristic ESI & Shock Index Engine"]
         Render -->|"SlowAPI Protection"| RateLimit["Rate Limiting & Threat Shield"]
     end
@@ -88,7 +88,8 @@ sequenceDiagram
 
 | Clinical Console | Primary Responsibilities | Key Technologies Used |
 |---|---|---|
-| **1. Registration & Triage** | Patient digital intake, MRN allocation, vital sign capture, AI emergency severity scoring, OPD token dispatch. | React Hook Form, Gemini Triage API, Lucide Icons |
+### Registration & Triage
+ Patient digital intake, MRN allocation, vital sign capture, AI emergency severity scoring,<br>OPD token dispatch with priority-based sorting (priority_score 1-100, critical cases queued first). | React Hook Form, Gemini Triage API, Lucide Icons |
 | **2. Doctor Station** | Live urgency-sorted queue, historical timeline, SOAP clinical notes, drug database autocomplete, instant Rx/Lab dispatch. | React, Axios, JWT RBAC, Optimistic UI |
 | **3. Pharmacy Station** | Real-time incoming prescription feed, stock tracking, batch management, low-stock threshold alerts, 1-click dispensing. | React, Reactive Polling, Tailwind CSS |
 | **4. Diagnostic Lab** | Test order accessioning, specimen status lifecycle (`pending` $\to$ `in-progress` $\to$ `completed`), quantitative result entry. | React, Standardized Diagnostic Schemas |
@@ -98,13 +99,21 @@ sequenceDiagram
 
 ## 🧠 AI Clinical Triage Engine & Quantification
 
-SwasthaTrack features a resilient clinical triage engine in [`backend/utils/gemini_triage.py`](backend/utils/gemini_triage.py).
+SwasthaTrack features a resilient dual-engine clinical triage engine in [`backend/utils/gemini_triage.py`](backend/utils/gemini_triage.py) with all clinical thresholds centralized in [`backend/utils/triage_thresholds.py`](backend/utils/triage_thresholds.py).
 
-### 1. Dual-Engine Architecture
-1. **Primary AI Engine**: Calls Google Gemini 1.5 Flash using structured JSON generation with strict Pydantic schemas.
-2. **Zero-Downtime Deterministic Fallback**: If network fails, API keys are missing, or rate limits occur, an instant rule-based Emergency Severity Index (ESI) engine evaluates patient vitals and symptoms with zero perceived latency.
+### 1. Dual-Engine Architecture (Heuristic-First)
+1. **Deterministic Heuristic Engine (always runs first)**: Instantly evaluates patient vitals and symptoms using the Emergency Severity Index protocol, including:
+   - Shock Index calculation (`HR / SBP`) for adults only (pediatric norms excluded per clinician review)
+   - Pediatric age bands (neonatal/infant thresholds for bradycardia) with `# TODO(clinician-review)` markers
+   - Word-boundary symptom matching with negation detection (e.g., "no chest pain" does not trigger emergency; "history of asthma" overrides asthma trigger)
+   - Critical bradycardia (<50 BPM), hyperpyrexia, hypotensive shock, hypertensive crisis detection
+2. **Primary AI Engine (Google Gemini)**: If `GEMINI_API_KEY` and `GEMINI_MODEL` are configured, calls Gemini asynchronously via the `x-goog-api-key` header (not URL parameter) with a 3-second timeout and 1 retry. Uses a shared `httpx.AsyncClient` for connection reuse.
+3. **Winner Selection**: Returns the **higher urgency** of the two engines, with ties broken by higher `priority_score`.
 
-### 2. Clinical Quantification Logic
+**Failure modes (all fall back to heuristic)**: API key missing, model not set, network errors, HTTP 429, timeouts, invalid JSON, invalid urgency values.
+
+### 2. Clinical Quantification Logic & Thresholds
+All clinical threshold constants are centralized in [`backend/utils/triage_thresholds.py`](backend/utils/triage_thresholds.py) with `# TODO(clinician-review)` markers for values requiring clinical validation:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -116,10 +125,12 @@ SwasthaTrack features a resilient clinical triage engine in [`backend/utils/gemi
 │              │              │ (Immediate│ Systolic <90 │ chest pain, stroke,│
 │              │              │ Resusc.)  │ Shock Idx≥0.9│ unconsciousness,   │
 │              │              │           │ BP > 180/110 │ vomiting blood     │
+│              │              │           │ HR < 50 (bradycardia)│              │
 ├──────────────┼──────────────┼───────────┼──────────────┼────────────────────┤
 │ HIGH         │ 70 - 89      │ 5-15 mins │ SpO2 90-93%  │ Fractures, acute   │
 │              │              │           │ Temp > 102.5 │ asthma, severe pain│
 │              │              │           │ HR > 130 BPM │ seizures, burns    │
+│              │              │           │ HR < 50 (pediatric/neonatal band)│    │
 ├──────────────┼──────────────┼───────────┼──────────────┼────────────────────┤
 │ MEDIUM       │ 40 - 69      │ 15-30 mins│ Stable vitals│ Moderate fever,    │
 │              │              │           │ HR 100-130   │ vomiting, diarrhea,│
@@ -161,8 +172,15 @@ SwasthaTrack adheres to enterprise-grade clinical data integrity and threat miti
   - `POST /`: Doctor requests diagnostic lab tests.
   - `PUT /{id}/status`: Lab technician updates specimen collection status and publishes quantitative test results.
 
-### 4. Queue Concurrency & Integrity Protection
-- **Date-Prefixed Tokens**: Tokens are generated in `Q-YYYYMMDD-001` format, preventing token collision across consecutive hospital operating dates.
+### 4. Audit Logging
+- All critical clinical data operations (create, read, update, delete) are logged to the `audit_log` table via the [`backend/utils/audit.py`](backend/utils/audit.py) helper module.
+- Logged endpoints include patients, prescriptions, and lab orders.
+- The `AuditLog` model records: `user_id`, `role`, `action`, `resource_type`, `resource_id`, `timestamp`, and `detail`.
+
+### 5. Queue Concurrency & Integrity Protection
+- **Queue Concurrency & Integrity Protection**:
+ - **Priority-Queued Tokens**: Queue entries are sorted by `priority_score DESC`, then `check_in_time ASC`, ensuring critical acuity cases are seen first. The `limit` parameter is capped at 200.
+ - **Date-Prefixed Tokens**: Tokens are generated in `Q-YYYYMMDD-001` format, preventing token collision across consecutive hospital operating dates.
 - **Concurrency Loop**: Uses database-level collision detection loops to resolve race conditions between concurrent triage reception desks.
 - **State Transition Guard**: `PUT /api/queue/{id}/status` strictly validates transitions via `QueueStatus(str, Enum)` (`waiting`, `called`, `in-progress`, `completed`, `cancelled`, `no-show`). Invalid status transitions return HTTP 422.
 
@@ -221,8 +239,16 @@ SwasthaTrack adheres to enterprise-grade clinical data integrity and threat miti
 
 ### Continuous Integration Pipeline
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) triggers on every push and PR to `main`:
-- **Backend Test Job**: Sets up Python 3.12, installs dependencies, and runs **all 40 pytest unit tests** covering auth, AI triage, patient intake, concurrency-safe queues, object-level authorization (IDOR protection), prescriptions, and lab orders.
-- **Frontend Build Job**: Sets up Node.js 20, builds Astro static output (12 pages), verifies TypeScript types and generates XML sitemaps.
+- **Backend CI Job**: Sets up Python 3.12, installs dependencies, runs **ruff lint**, and executes the full pytest suite (**108 tests** covering auth, AI triage with mock transport, patient intake, concurrency-safe queues, object-level authorization (IDOR protection), prescriptions, lab orders, and audit logging).
+- **Frontend CI Job**: Sets up Node.js 20, runs `astro check` for TypeScript type verification, builds the Astro static output (12 pages), and uploads coverage artifacts.
+- **Security Scanning**: `pip-audit` scans for known vulnerabilities in Python dependencies.
+- Database: Postgres service container with test fixtures for integration testing.
+
+### Dependency Updates
+GitHub Dependabot is configured in [`.github/dependabot.yml`](.github/dependabot.yml) to automatically scan and update:
+- Backend Python dependencies (pip ecosystem)
+- Frontend npm dependencies
+- GitHub Actions workflows
 
 ---
 
@@ -244,7 +270,8 @@ SwasthaTrack adheres to enterprise-grade clinical data integrity and threat miti
    - Managed PostgreSQL database (`swasthatrack-db`)
    - Web service (`swasthatrack-api`)
 6. In Render Dashboard $\longrightarrow$ `swasthatrack-api` $\longrightarrow$ **Environment**:
-   - Add `GEMINI_API_KEY` = `your_google_ai_studio_api_key`
+    - Add `GEMINI_API_KEY` = `your_google_ai_studio_api_key`
+    - Add `GEMINI_MODEL` = `gemini-3.8-flash` (recommended; must be set explicitly — no default model is provided)
 7. Click **Apply**. Your API will be live at `https://swasthatrack-api.onrender.com`.
 
 ### 2. Deploy Frontend on Vercel (2 minutes)
@@ -278,7 +305,7 @@ When presenting SwasthaTrack in technical interviews, use these structured talki
 ### 3. Fault-Tolerant AI Design
 **Q: "What happens if the Gemini LLM API goes down or exceeds its rate limit during an emergency?"**
 > **Answer**:  
-> *"In a clinical environment, zero downtime is a strict requirement. We designed a dual-engine architecture: the primary pipeline invokes Google Gemini 1.5 Flash with strict JSON schemas and a 10-second timeout. If any network timeout, HTTP error, or rate limit occurs, the system automatically falls back to an internal deterministic Emergency Severity Index (ESI) heuristic engine. It parses vitals, computes the Shock Index ($HR/SBP$), and checks acute red flags (like severe hemorrhage or chest pain) locally in under 2ms."*
+> *"In a clinical environment, zero downtime is a strict requirement. We designed a heuristic-first dual-engine architecture: the rule-based engine evaluates vitals and symptoms instantly using the Emergency Severity Index protocol (2ms latency), including Shock Index calculation, critical bradycardia detection, and pediatric age band thresholds. The Gemini AI engine runs asynchronously afterward with a 3-second timeout and 1 retry via a shared `httpx.AsyncClient`, sending the API key via the `x-goog-api-key` header (not URL). The system returns whichever engine assigns the higher urgency. All failure modes — network timeouts, HTTP 429 rate limits, invalid JSON, missing API keys — trigger fallback to the deterministic heuristic engine."*
 
 ---
 
@@ -370,9 +397,12 @@ npm run dev
 
 ### 🧪 Running Test Suites
 ```bash
-# Run backend pytest suite (40 tests across all subsystems)
+# Run backend pytest suite (108 tests across all subsystems)
 cd backend
 python -m pytest
+
+# Run ruff linting
+ruff check .
 
 # Run frontend production build verification (12 static pages)
 cd frontend-v2
