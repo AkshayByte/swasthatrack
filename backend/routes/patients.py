@@ -1,19 +1,21 @@
+import json
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+
 from database import get_db
 from models.patient import Patient as PatientModel
 from models.user import User
 from routes.auth import get_current_user
 from schemas.patient import Patient, PatientCreate, PatientUpdate
-from datetime import datetime
-import json
+from utils.audit import log_read, log_write
 
 router = APIRouter()
 
 @router.post("/", response_model=Patient, status_code=status.HTTP_201_CREATED)
 def create_patient(
-    patient: PatientCreate, 
+    patient: PatientCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -24,12 +26,12 @@ def create_patient(
     existing_patient = db.query(PatientModel).filter(PatientModel.phone == patient.phone).first()
     if existing_patient:
         raise HTTPException(status_code=400, detail="Patient with this phone number already exists")
-    
+
     # Generate registration number if not provided or empty
     if not patient.registration_number:
         import time
         patient.registration_number = f"REG{datetime.now().strftime('%Y%m%d')}{int(time.time())}"
-    
+
     existing_reg = db.query(PatientModel).filter(PatientModel.registration_number == patient.registration_number).first()
     if existing_reg:
         raise HTTPException(status_code=400, detail="Registration number already exists")
@@ -51,7 +53,8 @@ def create_patient(
     db.add(db_patient)
     db.commit()
     db.refresh(db_patient)
-    
+    log_write(db, current_user, "create", "patient", db_patient.id)
+
     return Patient(
         id=db_patient.id,
         name=db_patient.name,
@@ -71,10 +74,10 @@ def create_patient(
         registration_date=db_patient.registration_date
     )
 
-@router.get("/", response_model=List[Patient])
+@router.get("/", response_model=list[Patient])
 def read_patients(
-    skip: int = 0, 
-    limit: int = 100, 
+    skip: int = 0,
+    limit: int = 100,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -82,6 +85,7 @@ def read_patients(
         raise HTTPException(status_code=403, detail="Not authorized to access patient directory")
 
     patients = db.query(PatientModel).offset(skip).limit(limit).all()
+    log_read(db, current_user, "patient", "list")
     return [
         Patient(
             id=p.id,
@@ -105,7 +109,7 @@ def read_patients(
 
 @router.get("/{patient_id}", response_model=Patient)
 def read_patient(
-    patient_id: int, 
+    patient_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -115,7 +119,8 @@ def read_patient(
     db_patient = db.query(PatientModel).filter(PatientModel.id == patient_id).first()
     if db_patient is None:
         raise HTTPException(status_code=404, detail="Patient not found")
-    
+    log_read(db, current_user, "patient", str(db_patient.id))
+
     return Patient(
         id=db_patient.id,
         name=db_patient.name,
@@ -137,8 +142,8 @@ def read_patient(
 
 @router.put("/{patient_id}", response_model=Patient)
 def update_patient(
-    patient_id: int, 
-    patient_update: PatientUpdate, 
+    patient_id: int,
+    patient_update: PatientUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -148,16 +153,17 @@ def update_patient(
     db_patient = db.query(PatientModel).filter(PatientModel.id == patient_id).first()
     if db_patient is None:
         raise HTTPException(status_code=404, detail="Patient not found")
-    
+
     update_data = patient_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         if key in ["allergies", "medical_history"] and isinstance(value, list):
             setattr(db_patient, key, json.dumps(value))
         else:
             setattr(db_patient, key, value)
-    
+
     db.commit()
     db.refresh(db_patient)
+    log_write(db, current_user, "update", "patient", str(db_patient.id))
     return Patient(
         id=db_patient.id,
         name=db_patient.name,
@@ -179,7 +185,7 @@ def update_patient(
 
 @router.delete("/{patient_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_patient(
-    patient_id: int, 
+    patient_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -189,7 +195,7 @@ def delete_patient(
     patient = db.query(PatientModel).filter(PatientModel.id == patient_id).first()
     if patient is None:
         raise HTTPException(status_code=404, detail="Patient not found")
-    
+
+    log_write(db, current_user, "delete", "patient", str(patient.id))
     db.delete(patient)
     db.commit()
-    return None

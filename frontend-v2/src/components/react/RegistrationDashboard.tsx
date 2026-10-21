@@ -1,23 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { SwasthaAPI, type Patient, type QueueEntry } from '../../lib/api';
+import { SwasthaAPI, type Patient, type QueueEntry, type QueueStatus } from '../../lib/api';
 import { UserPlus, Sparkles, Clock, AlertTriangle, CheckCircle2, ArrowRight, Zap } from 'lucide-react';
 import {
   priorityBadge, statusBadge,
   btnPrimary, btnSuccess, btnCta,
   inputClass, inputMono, selectClass, textareaClass,
   card, cardHeader, label, pageHeader, statPill, toast as toastCls,
-  listItem, listItemSelected, listItemEmergency,
+  listItem, listItemSelected, listItemEmergency, alertDanger,
 } from '../../lib/ui';
 
-const fallbackQueueData: QueueEntry[] = [
-  { id: 101, patient_id: 1, patient_name: 'Rajesh Sharma', service_type: 'Cardiology OPD', priority: 'high', status: 'in-progress', queue_number: 'Q-101', doctor_name: 'Dr. Vikram Sethi, MD', notes: 'Substernal chest tightness radiating to left shoulder on exertion | BP 145/92', estimated_wait_time: 5, created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString() },
-  { id: 102, patient_id: 2, patient_name: 'Anita Patel', service_type: 'Endocrinology OPD', priority: 'medium', status: 'waiting', queue_number: 'Q-102', doctor_name: 'Dr. Sunita Rao, MD', notes: 'Type-2 Diabetes routine HbA1c review and insulin adjustment | BP 124/80', estimated_wait_time: 18, created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
-  { id: 103, patient_id: 3, patient_name: 'Mohan Lal Verma', service_type: 'Emergency Medicine', priority: 'emergency', status: 'waiting', queue_number: 'Q-103', doctor_name: 'Dr. Vikram Sethi, MD', notes: 'Severe hypertensive crisis (BP 175/110 mmHg), acute dizziness and vertigo', estimated_wait_time: 0, created_at: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
-];
+const ACTIVE_QUEUE_STATUSES: QueueStatus[] = ['waiting', 'called', 'in-progress'];
 
 export default function RegistrationDashboard() {
-  const [queue, setQueue] = useState<QueueEntry[]>(fallbackQueueData);
+  const [queue, setQueue] = useState<QueueEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
@@ -33,10 +30,21 @@ export default function RegistrationDashboard() {
   const [successMessage, setSuccessMessage] = useState('');
 
   const loadData = async () => {
+    setLoading(true);
     try {
       const [, qList] = await Promise.all([SwasthaAPI.getPatients(), SwasthaAPI.getQueue()]);
-      if (qList && qList.length > 0) setQueue(qList);
-    } catch {}
+      const active = (qList || []).filter(q => ACTIVE_QUEUE_STATUSES.includes(q.status));
+      active.sort((a, b) => {
+        const pw: Record<string, number> = { emergency: 4, high: 3, medium: 2, low: 1 };
+        return (pw[b.priority] || 0) - (pw[a.priority] || 0);
+      });
+      setQueue(active);
+    } catch (err) {
+      setError('Failed to load queue data. Please refresh the page.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { loadData(); }, []);
@@ -55,35 +63,45 @@ export default function RegistrationDashboard() {
     e.preventDefault();
     if (!name || !phone) return;
     setSubmitting(true);
+    setError('');
     try {
       const triage = SwasthaAPI.calculateAITriage(symptoms || 'General Checkup', { temp, bp });
-      let newPatientId = Date.now();
-      try {
-        const np = await SwasthaAPI.createPatient({ name, age: Number(age) || 30, gender, phone, blood_group: bloodGroup });
-        newPatientId = np.id;
-      } catch {}
 
-      const newEntry: QueueEntry = {
-        id: Date.now(), patient_id: newPatientId, patient_name: name,
-        service_type: triage.recommendedDepartment, priority: triage.urgency,
-        status: 'waiting', queue_number: `Q-${Math.floor(100 + Math.random() * 900)}`,
-        doctor_name: 'Dr. Vikram Sethi, MD',
+      // Step 1: Create patient
+      const np = await SwasthaAPI.createPatient({
+        name, age: Number(age) || 30, gender, phone, blood_group: bloodGroup
+      });
+
+      // Step 2: Add to queue — use the entry returned by the backend
+      const newEntry = await SwasthaAPI.addToQueue({
+        patient_id: np.id,
+        service_type: triage.recommendedDepartment,
+        priority: triage.urgency,
         notes: `AI Triage: ${triage.reasoning} | BP: ${bp}, Temp: ${temp}°F`,
-        estimated_wait_time: triage.estimatedWaitMinutes, created_at: new Date().toISOString(),
-      };
+        estimated_wait_time: triage.estimatedWaitMinutes,
+      });
+
+      // Prepend the newly added entry to the local queue
       setQueue(prev => [newEntry, ...prev]);
       setSuccessMessage(`${name} registered — ${triage.urgency.toUpperCase()} priority, routed to ${triage.recommendedDepartment}`);
       setName(''); setAge(''); setPhone(''); setSymptoms(''); setAiTriage(null);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || err?.message || 'Registration failed. Please try again.');
     } finally {
       setSubmitting(false);
-      setTimeout(() => setSuccessMessage(''), 6000);
+      setTimeout(() => { setSuccessMessage(''); setError(''); }, 6000);
     }
   };
 
-  const updateEntryStatus = (id: number, status: 'waiting' | 'in-progress' | 'completed') =>
-    setQueue(prev => prev.map(q => q.id === id ? { ...q, status } : q));
+  const updateEntryStatus = async (id: number, status: QueueStatus) => {
+    try {
+      await SwasthaAPI.updateQueueStatus(id, status);
+      setQueue(prev => prev.map(q => q.id === id ? { ...q, status } : q));
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail || err?.message || 'Failed to update status';
+      setError(`Unable to ${status === 'completed' ? 'complete' : status === 'in-progress' ? 'call in' : 'cancel'} patient: ${msg}`);
+    }
+  };
 
   const waitingCount = queue.filter(q => q.status === 'waiting').length;
   const inProgressCount = queue.filter(q => q.status === 'in-progress').length;
@@ -125,7 +143,7 @@ export default function RegistrationDashboard() {
         </div>
       </div>
 
-      {/* Toast */}
+       {/* Toast */}
       {successMessage && (
         <div className={toastCls}>
           <div className="flex items-center gap-2.5">
@@ -133,6 +151,15 @@ export default function RegistrationDashboard() {
             <span className="text-sm font-medium">{successMessage}</span>
           </div>
           <button onClick={() => setSuccessMessage('')} className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline shrink-0">Dismiss</button>
+        </div>
+      )}
+
+      {/* Error Banner */}
+      {error && (
+        <div className={alertDanger}>
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span className="flex-1">{error}</span>
+          <button onClick={() => setError('')} className="text-xs font-semibold text-rose-700 dark:text-rose-300 hover:underline shrink-0">Dismiss</button>
         </div>
       )}
 
@@ -238,16 +265,11 @@ export default function RegistrationDashboard() {
                         : <Sparkles className="w-4 h-4" />}
                       Triage: {aiTriage.urgency}
                     </span>
-                    <div className="flex items-center gap-1.5">
-                      {aiTriage.confidenceScore && (
-                        <span className="px-2 py-0.5 rounded-md bg-white/60 dark:bg-black/20 text-[11px] font-semibold border border-current/20">
-                          {Math.round(aiTriage.confidenceScore * 100)}% confidence
-                        </span>
-                      )}
-                      <span className="px-2 py-0.5 rounded-md bg-white/60 dark:bg-black/20 text-[11px] font-mono border border-current/20">
-                        Score {aiTriage.priorityScore}/100
-                      </span>
-                    </div>
+                     <div className="flex items-center gap-1.5">
+                       <span className="px-2 py-0.5 rounded-md bg-white/60 dark:bg-black/20 text-[11px] font-mono border border-current/20">
+                         Score {aiTriage.priorityScore}/100
+                       </span>
+                     </div>
                   </div>
                   <p className={`text-xs leading-relaxed ${triageTextColor} opacity-90`}>{aiTriage.reasoning}</p>
                   {aiTriage.diagnosticIndicators?.length > 0 && (
@@ -263,8 +285,6 @@ export default function RegistrationDashboard() {
                   </div>
                 </div>
               )}
-
-              <button type="submit" disabled={submitting} className={btnCta}>
                 {submitting ? 'Registering…' : 'Register & Assign Priority Queue Slot'}
                 <ArrowRight className="w-4 h-4" />
               </button>

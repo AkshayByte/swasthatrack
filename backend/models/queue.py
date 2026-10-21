@@ -1,7 +1,10 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey
-from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
+
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import relationship
+
 from database import Base
+
 
 class QueueEntry(Base):
     __tablename__ = "queue_entries"
@@ -13,6 +16,7 @@ class QueueEntry(Base):
     doctor_id = Column(Integer, nullable=True)
     doctor_name = Column(String(100), nullable=True)
     priority = Column(String(20), default="normal")
+    priority_score = Column(Integer, default=25)
     status = Column(String(20), default="waiting", index=True)
     estimated_wait_time = Column(Integer, default=0)  # in minutes
     check_in_time = Column(DateTime, default=lambda: datetime.now(timezone.utc))

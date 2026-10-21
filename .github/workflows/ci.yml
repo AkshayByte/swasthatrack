@@ -13,6 +13,20 @@ jobs:
     defaults:
       run:
         working-directory: ./backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: swastha
+          POSTGRES_PASSWORD: testpass123
+          POSTGRES_DB: swastha_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U swastha"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
@@ -27,12 +41,35 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run tests
-        run: python -m pytest -v --tb=short
+      - name: Install dev tools
+        run: pip install ruff pip-audit pytest-cov
+
+      - name: Lint with ruff
+        run: ruff check .
+
+      - name: Run tests with SQLite (coverage)
+        run: python -m pytest -v --tb=short --cov=. --cov-report=term --cov-report=xml
         env:
           DATABASE_URL: sqlite:///./test.db
           SECRET_KEY: ci-test-secret-key
           ENVIRONMENT: development
+
+      - name: Run tests with Postgres
+        run: python -m pytest -v --tb=short
+        env:
+          DATABASE_URL: postgresql+psycopg2://swastha:testpass123@localhost:5432/swastha_test
+          SECRET_KEY: ci-test-secret-key
+          ENVIRONMENT: development
+
+      - name: Run pip-audit
+        run: pip-audit -r requirements.txt
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage.xml
 
   # ─── Frontend: Type-check + Build ─────────────────────────
   frontend:
@@ -54,7 +91,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build (type-check + compile)
+      - name: Type-check with astro check
+        run: npx astro check
+
+      - name: Build
         run: npm run build
         env:
           PUBLIC_API_BASE_URL: https://swasthatrack-api.onrender.com/api

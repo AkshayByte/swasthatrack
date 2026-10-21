@@ -1,7 +1,7 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List, Optional
-from datetime import datetime, timezone
 
 from database import get_db
 from models.lab_report import LabReport as LabReportModel
@@ -10,14 +10,15 @@ from models.user import User
 from routes.auth import get_current_user
 from schemas.lab_report import (
     LabOrderCreateRequest,
-    LabOrderStatusUpdate,
     LabOrderResponse,
+    LabOrderStatusUpdate,
 )
+from utils.audit import log_read, log_write
 
 router = APIRouter()
 
 
-def _format_lab_order(report: LabReportModel, patient_name: Optional[str] = None) -> dict:
+def _format_lab_order(report: LabReportModel, patient_name: str | None = None) -> dict:
     return {
         "id": report.id,
         "patient_id": report.patient_id,
@@ -34,9 +35,9 @@ def _format_lab_order(report: LabReportModel, patient_name: Optional[str] = None
     }
 
 
-@router.get("/", response_model=List[LabOrderResponse])
+@router.get("/", response_model=list[LabOrderResponse])
 def get_lab_orders(
-    status: Optional[str] = None,
+    status: str | None = None,
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
@@ -54,6 +55,7 @@ def get_lab_orders(
         query = query.filter(LabReportModel.status == status.lower())
 
     results = query.order_by(LabReportModel.created_at.desc()).offset(skip).limit(limit).all()
+    log_read(db, current_user, "lab_order", "list")
     return [_format_lab_order(report) for report in results]
 
 
@@ -93,6 +95,7 @@ def create_lab_order(
     db.add(new_report)
     db.commit()
     db.refresh(new_report)
+    log_write(db, current_user, "create", "lab_order", str(new_report.id))
 
     return _format_lab_order(new_report, patient_name=patient.name)
 
@@ -111,6 +114,7 @@ def get_lab_order(
         if not report.patient or current_user.email != report.patient.email:
             raise HTTPException(status_code=403, detail="Not authorized to access this diagnostic lab order")
 
+    log_read(db, current_user, "lab_order", str(report.id))
     return _format_lab_order(report)
 
 
@@ -149,11 +153,12 @@ def update_lab_order_status(
     report.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(report)
+    log_write(db, current_user, "update", "lab_order", str(report.id))
 
     return _format_lab_order(report)
 
 
-@router.get("/patient/{patient_id}", response_model=List[LabOrderResponse])
+@router.get("/patient/{patient_id}", response_model=list[LabOrderResponse])
 def get_patient_lab_orders(
     patient_id: int,
     db: Session = Depends(get_db),

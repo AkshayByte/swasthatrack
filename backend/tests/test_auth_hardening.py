@@ -1,11 +1,11 @@
+import os
+from unittest.mock import patch
+
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-from unittest.mock import patch
-import os
-import importlib
+
 from models.user import User
 from utils.security import get_password_hash
-
 
 # ─── (a) GOOGLE_CLIENT_ID empty → 503 ─────────────────────────────────────────
 
@@ -121,8 +121,9 @@ def test_token_rejects_inactive_user(client: TestClient, db_session: Session):
 
 def test_get_current_user_rejects_inactive_user(client: TestClient, db_session: Session):
     """GET /api/auth/me must reject a deactivated user even with a valid token."""
-    from utils.security import create_access_token
     from datetime import timedelta
+
+    from utils.security import create_access_token
 
     user = User(
         email="inactive_me@example.com",
@@ -154,7 +155,7 @@ def test_get_current_user_rejects_inactive_user(client: TestClient, db_session: 
 
 def test_secret_key_check_raises_in_production_with_default():
     """In production, a default SECRET_KEY must raise at startup."""
-    import utils.security as security
+    from utils import security
     with patch.object(security, "ENVIRONMENT", "production"), \
          patch.object(security, "SECRET_KEY", None):
         with patch.dict(os.environ, {"ENVIRONMENT": "production"}, clear=False):
@@ -168,7 +169,7 @@ def test_secret_key_check_raises_in_production_with_default():
 
 def test_secret_key_check_raises_in_production_with_dev_default():
     """In production, the dev default SECRET_KEY must raise at startup."""
-    import utils.security as security
+    from utils import security
     with patch.object(security, "ENVIRONMENT", "production"), \
          patch.object(security, "SECRET_KEY", "dev_secret_key_change_in_production"):
         try:
@@ -181,7 +182,7 @@ def test_secret_key_check_raises_in_production_with_dev_default():
 
 def test_secret_key_check_passes_in_development():
     """In development, a missing or default SECRET_KEY should NOT raise."""
-    import utils.security as security
+    from utils import security
     with patch.object(security, "ENVIRONMENT", "development"), \
          patch.object(security, "SECRET_KEY", "dev_secret_key_change_in_production"):
         security.validate_secret_key()  # Should not raise

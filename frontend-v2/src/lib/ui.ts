@@ -26,12 +26,16 @@ export const priorityBadge: Record<string, string> = {
 export const statusBadge: Record<string, string> = {
   waiting:
     'inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border bg-slate-100 border-slate-300 text-slate-600 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-400',
+  called:
+    'inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border bg-sky-50 border-sky-300 text-sky-700 dark:bg-sky-950/60 dark:border-sky-700 dark:text-sky-300',
   'in-progress':
     'inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-950/60 dark:border-blue-700 dark:text-blue-300',
-  'in-consultation':
-    'inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border bg-indigo-50 border-indigo-300 text-indigo-700 dark:bg-indigo-950/60 dark:border-indigo-700 dark:text-indigo-300',
   completed:
     'inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border bg-emerald-50 border-emerald-300 text-emerald-700 dark:bg-emerald-950/60 dark:border-emerald-700 dark:text-emerald-300',
+  cancelled:
+    'inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border bg-rose-50 border-rose-300 text-rose-700 dark:bg-rose-950/60 dark:border-rose-700 dark:text-rose-300',
+  'no-show':
+    'inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border bg-gray-50 border-gray-300 text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400',
   pending:
     'inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border bg-amber-50 border-amber-300 text-amber-700 dark:bg-amber-950/60 dark:border-amber-700 dark:text-amber-300',
   dispensed:
@@ -99,6 +103,9 @@ export const listItemEmergency =
 // ─── Toast / Notification Banner ──────────────────────────────────────────────
 export const toast =
   'p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 flex items-center justify-between gap-4';
+
+export const alertDanger =
+  'p-3.5 rounded-xl border border-rose-200 dark:border-rose-800/60 bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 flex items-center gap-2.5 text-sm';
 
 // ─── Section header inside a card ────────────────────────────────────────────
 export const cardHeader =

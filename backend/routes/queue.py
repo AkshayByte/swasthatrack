@@ -1,14 +1,21 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from typing import List
+from sqlalchemy.orm import Session
+
 from database import get_db
 from models.queue import QueueEntry as QueueEntryModel
 from models.user import User
 from routes.auth import get_current_user
-from schemas.queue import QueueEntry, QueueEntryCreate, TriageRequest, TriageResponse, QueueStatus
+from schemas.queue import (
+    QueueEntry,
+    QueueEntryCreate,
+    QueueStatus,
+    TriageRequest,
+    TriageResponse,
+)
 from utils.gemini_triage import analyze_clinical_triage
-from datetime import datetime, timezone
 
 router = APIRouter()
 
@@ -23,13 +30,13 @@ async def perform_ai_triage(
     """
     if current_user.role not in ["admin", "registration", "doctor", "pharmacist", "lab"]:
         raise HTTPException(status_code=403, detail="Not authorized to run clinical AI triage")
-    
+
     triage_result = await analyze_clinical_triage(request)
     return triage_result
 
 @router.post("/", response_model=QueueEntry, status_code=status.HTTP_201_CREATED)
 def add_to_queue(
-    entry: QueueEntryCreate, 
+    entry: QueueEntryCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -48,7 +55,7 @@ def add_to_queue(
                 count += 1
                 candidate = f"Q-{today_str}-{(count + attempt + 1):03d}"
             entry.queue_number = candidate
-        
+
         status_val = entry.status.value if hasattr(entry.status, "value") else entry.status
         db_entry = QueueEntryModel(
             patient_id=entry.patient_id,
@@ -57,6 +64,7 @@ def add_to_queue(
             doctor_id=entry.doctor_id,
             doctor_name=entry.doctor_name,
             priority=entry.priority,
+            priority_score=entry.priority_score,
             status=status_val,
             estimated_wait_time=entry.estimated_wait_time,
             notes=entry.notes
@@ -76,11 +84,11 @@ def add_to_queue(
             # Clear candidate queue number to recalculate in next iteration
             entry.queue_number = ""
 
-@router.get("/", response_model=List[QueueEntry])
+@router.get("/", response_model=list[QueueEntry])
 def read_queue(
-    skip: int = 0, 
-    limit: int = 100, 
-    status: str = None, 
+    skip: int = 0,
+    limit: int = 100,
+    status: str = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -90,13 +98,23 @@ def read_queue(
     query = db.query(QueueEntryModel)
     if status:
         query = query.filter(QueueEntryModel.status == status)
-        
-    entries = query.order_by(QueueEntryModel.check_in_time).offset(skip).limit(limit).all()
+
+    limit = min(limit, 200)
+    entries = (
+        query
+        .order_by(
+            QueueEntryModel.priority_score.desc(),
+            QueueEntryModel.check_in_time.asc(),
+        )
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
     return entries
 
 @router.get("/{entry_id}", response_model=QueueEntry)
 def read_queue_entry(
-    entry_id: int, 
+    entry_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -110,8 +128,8 @@ def read_queue_entry(
 
 @router.put("/{entry_id}/status", response_model=QueueEntry)
 def update_queue_status(
-    entry_id: int, 
-    status: QueueStatus, 
+    entry_id: int,
+    status: QueueStatus,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -121,13 +139,13 @@ def update_queue_status(
     entry = db.query(QueueEntryModel).filter(QueueEntryModel.id == entry_id).first()
     if entry is None:
         raise HTTPException(status_code=404, detail="Queue entry not found")
-        
+
     entry.status = status.value
     if status == QueueStatus.COMPLETED:
         entry.completed_at = datetime.now(timezone.utc)
     elif status in [QueueStatus.IN_PROGRESS, QueueStatus.CALLED]:
         entry.called_at = datetime.now(timezone.utc)
-        
+
     db.commit()
     db.refresh(entry)
     return entry

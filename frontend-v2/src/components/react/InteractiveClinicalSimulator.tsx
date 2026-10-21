@@ -12,7 +12,6 @@ interface ClinicalCase {
     urgency: 'emergency' | 'high' | 'medium' | 'low';
     esiLevel: string;
     priorityScore: number;
-    confidenceScore: number;
     reasoning: string;
     indicators: string[];
     department: string;
@@ -37,7 +36,6 @@ const CLINICAL_CASES: ClinicalCase[] = [
       urgency: 'emergency',
       esiLevel: 'Level 1: Resuscitation (STAT)',
       priorityScore: 98,
-      confidenceScore: 0.96,
       reasoning: 'Critical acute coronary syndrome markers with severe arterial desaturation (SpO2 88%). Requires immediate resuscitation bypass.',
       indicators: ['Acute Ischemic Chest Pain', 'Hypoxemia SpO2 < 90%', 'Severe Diaphoresis', 'Tachycardia'],
       department: 'Emergency & Cardiology Care Unit',
@@ -64,7 +62,6 @@ const CLINICAL_CASES: ClinicalCase[] = [
       urgency: 'high',
       esiLevel: 'Level 2: Emergent Urgent Care',
       priorityScore: 82,
-      confidenceScore: 0.94,
       reasoning: 'Moderate respiratory distress with compromised airflow. Expedited clinical nebulization indicated within 10 mins.',
       indicators: ['Acute Bronchospasm', 'Expiratory Wheeze', 'Tachycardia', 'SpO2 93% on Room Air'],
       department: 'Urgent Care / Pulmonology OPD',
@@ -90,7 +87,6 @@ const CLINICAL_CASES: ClinicalCase[] = [
       urgency: 'low',
       esiLevel: 'Level 4: Routine Outpatient Care',
       priorityScore: 28,
-      confidenceScore: 0.95,
       reasoning: 'Clinically stable chronic disease maintenance visit without acute warning signs or vital instability. Standard OPD queuing.',
       indicators: ['Stable Baseline Vitals', 'Routine Chronic Followup', 'Zero Red Flag Triggers'],
       department: 'General Internal Medicine OPD',
@@ -266,12 +262,9 @@ export default function InteractiveClinicalSimulator() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <div>
                 <div className="text-xs font-mono text-slate-400 uppercase">Emergency Severity Index & Neural Assessment</div>
-                <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>{currentCase.triage.esiLevel}</span>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full font-mono font-semibold bg-sky-100 text-sky-800 dark:bg-sky-950/80 dark:text-sky-300">
-                    Confidence: {Math.round(currentCase.triage.confidenceScore * 100)}%
-                  </span>
-                </h4>
+                 <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                   {currentCase.triage.esiLevel}
+                 </h4>
               </div>
               <div className="text-xs font-mono px-3 py-1 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                 Priority Score: <strong className="text-sky-600 dark:text-sky-400">{currentCase.triage.priorityScore}/100</strong>

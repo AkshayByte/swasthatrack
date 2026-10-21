@@ -1,13 +1,14 @@
+import logging
+import os
+import time
 from contextlib import asynccontextmanager
+
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
 from sqlalchemy.exc import SQLAlchemyError
-import os
-from dotenv import load_dotenv
-import logging
-import time
 
 # Load environment variables
 load_dotenv()
@@ -17,9 +18,8 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 IS_PRODUCTION = ENVIRONMENT == "production"
 
 from database import create_tables
+from routes import auth, dashboard, lab_orders, medicine, patients, prescriptions, queue
 from utils.security import validate_secret_key
-from routes import medicine, dashboard, auth, patients, queue, prescriptions, lab_orders
-
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -44,11 +44,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Startup seed notice: {e}")
     yield
+    from utils.gemini_triage import _close_shared_client
+    await _close_shared_client()
     logger.info("SwasthaTrack API shut down.")
 
 
-from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+
 from utils.limiter import limiter
 
 app = FastAPI(
@@ -92,7 +95,7 @@ app.add_middleware(
 # Global Exception Handlers
 @app.exception_handler(SQLAlchemyError)
 async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
-    logger.error(f"Database error: {str(exc)}")
+    logger.error(f"Database error: {exc!s}")
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "Database operation failed"},
@@ -107,7 +110,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Global error: {str(exc)}")
+    logger.error(f"Global error: {exc!s}")
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "Internal server error"},

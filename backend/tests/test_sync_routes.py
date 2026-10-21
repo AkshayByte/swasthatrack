@@ -1,6 +1,6 @@
 import inspect
 
-from routes.auth import get_current_user, login, google_login, login_for_access_token
+from routes.auth import get_current_user, google_login, login, login_for_access_token
 from routes.prescriptions import update_prescription_status
 from routes.queue import perform_ai_triage
 

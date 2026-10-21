@@ -1,9 +1,7 @@
-import os
 import re
 
 import pytest
 from fastapi.testclient import TestClient
-
 
 # ─── (a) CORS regex only matches swasthatrack project ────────────────────────
 
@@ -28,7 +26,7 @@ def test_cors_allows_swasthatrack_origins(origin):
     "http://evil.com",
 ])
 def test_cors_blocks_non_swasthatrack_origins(origin):
-    assert not re.match(SWASTHATRACK_REGEX := SWASTHATRACK_CORS_REGEX, origin), f"{origin} should NOT match"
+    assert not re.match(SWASTHATRACK_CORS_REGEX, origin), f"{origin} should NOT match"
 
 
 def test_cors_response_rejects_non_matching_origin(client: TestClient):

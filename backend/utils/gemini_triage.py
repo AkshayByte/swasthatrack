@@ -1,48 +1,98 @@
-import os
-import re
+import asyncio
 import json
 import logging
-import asyncio
+import os
+import re
+
 import httpx
-from typing import Optional, Tuple
 from dotenv import load_dotenv
 
-from schemas.queue import TriageRequest, TriageResponse, VitalsInput
+from schemas.queue import TriageRequest, TriageResponse
+from utils.triage_thresholds import (
+    CRITICAL_BRADYCARDIA_THRESHOLD,
+    CRITICAL_SPO2_THRESHOLD,
+    EMERGENCY_SCORE_MAX,
+    EMERGENCY_SCORE_MIN,
+    EMERGENCY_SYMPTOMS,
+    HIGH_FEVER_F_THRESHOLD,
+    HIGH_SCORE_MAX,
+    HIGH_SCORE_MIN,
+    HIGH_SYMPTOMS,
+    HYPERPYREXIA_F_THRESHOLD,
+    HYPERTENSIVE_CRISIS_DIASTOLIC,
+    HYPERTENSIVE_CRISIS_SYSTOLIC,
+    LOW_SCORE_MAX,
+    LOW_SCORE_MIN,
+    MEDIUM_SCORE_MAX,
+    MEDIUM_SCORE_MIN,
+    MEDIUM_SYMPTOMS,
+    MODERATE_SPO2_THRESHOLD,
+    MODERATE_TACHYCARDIA_THRESHOLD,
+    NEGATION_OVERRIDES,
+    NEGATION_PATTERNS,
+    NEONATAL_AGE_DAYS,
+    PEDIATRIC_AGE_THRESHOLD,
+    PEDIATRIC_INFANT_HR_MIN,
+    PEDIATRIC_NEONATAL_HR_MIN,
+    SEVERE_TACHYCARDIA_THRESHOLD,
+    SHOCK_INDEX_THRESHOLD,
+    SHOCK_SYSTOLIC_THRESHOLD,
+    clamp_score,
+    urgency_to_band,
+)
 
 load_dotenv()
 logger = logging.getLogger(__name__)
 
+# Read model name ONLY from environment — no retired defaults
+# Recommended model: gemini-3.8-flash (set GEMINI_MODEL in production)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash").strip()
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "").strip()
+
+# Shared async HTTP client — created lazily, reused across calls
+_shared_http_client: httpx.AsyncClient | None = None
 
 
-TRIAGE_SYSTEM_PROMPT = """You are an expert emergency and outpatient triage decision support AI in SwasthaTrack healthcare platform.
+def _get_shared_client() -> httpx.AsyncClient:
+    global _shared_http_client
+    if _shared_http_client is None or _shared_http_client.is_closed:
+        _shared_http_client = httpx.AsyncClient(timeout=3.0)
+    return _shared_http_client
+
+
+async def _close_shared_client():
+    global _shared_http_client
+    if _shared_http_client is not None and not _shared_http_client.is_closed:
+        await _shared_http_client.aclose()
+        _shared_http_client = None
+
+
+TRIAGE_SYSTEM_PROMPT = f"""You are an expert emergency and outpatient triage decision support AI in SwasthaTrack healthcare platform.
 Analyze the patient's symptoms, vitals, age, gender, medical history, and allergies to classify clinical urgency and assign queue priority.
 
 Follow standardized clinical triage protocols (Emergency Severity Index - ESI / Manchester Triage System):
-- 'emergency': Immediate life threat. Examples: severe hemorrhage / heavy blood loss / vomiting or coughing blood, chest pain with radiation, acute stroke symptoms (FAST), respiratory distress / SpO2 < 90%, altered mental status / unconsciousness, severe anaphylaxis, traumatic shock (systolic BP < 90). Priority Score: 90-100. Wait time: 0 mins.
-- 'high': Potentially unstable, intense pain (VAS 7-10), high fever (>102.5°F), moderate hypoxia (SpO2 90-93%), acute asthma exacerbation, open fractures, diabetic ketoacidosis symptoms, severe dehydration. Priority Score: 70-89. Wait time: 5-15 mins.
-- 'medium': Stable acute illness without vital instability. Examples: moderate fever, persistent vomiting/diarrhea without shock, severe migraine, closed sprain, mild localized infections. Priority Score: 40-69. Wait time: 15-30 mins.
-- 'low': Non-urgent, routine follow-up, mild upper respiratory symptoms, medication refills, chronic symptom checkup. Priority Score: 1-39. Wait time: 30-60 mins.
+- 'emergency': Immediate life threat. Priority Score: {EMERGENCY_SCORE_MIN}-{EMERGENCY_SCORE_MAX}. Wait time: 0 mins.
+- 'high': Potentially unstable. Priority Score: {HIGH_SCORE_MIN}-{HIGH_SCORE_MAX}. Wait time: 5-15 mins.
+- 'medium': Stable acute illness without vital instability. Priority Score: {MEDIUM_SCORE_MIN}-{MEDIUM_SCORE_MAX}. Wait time: 15-30 mins.
+- 'low': Non-urgent, routine follow-up. Priority Score: {LOW_SCORE_MIN}-{LOW_SCORE_MAX}. Wait time: 30-60 mins.
 
 Respond ONLY with a valid JSON object matching this exact schema:
-{
+{{
   "urgency": "emergency" | "high" | "medium" | "low",
   "priority_score": integer (1-100),
   "recommended_department": string,
   "estimated_wait_minutes": integer,
   "diagnostic_indicators": [string],
-  "reasoning": string,
-  "confidence_score": float (between 0.85 and 0.99)
-}
+  "reasoning": string
+}}
+Do NOT include confidence_score in your response.
 """
 
 
-def _parse_blood_pressure(bp_str: Optional[str]) -> Tuple[Optional[int], Optional[int]]:
-    """Parse '120/80' into (systolic, diastolic) integers."""
+def _parse_blood_pressure(bp_str: str | None) -> tuple[int | None, int | None]:
     if not bp_str:
         return None, None
-    match = re.search(r'(\d{2,3})\s*/\s*(\d{2,3})', bp_str)
+    match = re.search(r"(\d{2,3})\s*/\s*(\d{2,3})", bp_str)
     if match:
         try:
             return int(match.group(1)), int(match.group(2))
@@ -51,191 +101,245 @@ def _parse_blood_pressure(bp_str: Optional[str]) -> Tuple[Optional[int], Optiona
     return None, None
 
 
+def _is_negated(symptom: str, symptoms_text: str) -> bool:
+    """Check if a symptom is negated in the symptoms text using word boundaries."""
+    # Find the position of the symptom in the text
+    pattern = re.escape(symptom)
+    matches = list(re.finditer(pattern, symptoms_text, re.IGNORECASE))
+    if not matches:
+        return False
+
+    for match in matches:
+        before = symptoms_text[: match.start()]
+        # Check if any negation pattern immediately precedes the symptom
+        for neg_pattern in NEGATION_PATTERNS:
+            if before.endswith((neg_pattern.strip(), neg_pattern)):
+                return True
+            if before.endswith((neg_pattern.strip() + " ", neg_pattern + " ")):
+                return True
+    return False
+
+
+def _match_symptoms(symptoms_text: str, keyword_list: list[str]) -> list[str]:
+    """Word-boundary match symptoms, excluding negated ones."""
+    matched = []
+    for kw in keyword_list:
+        # Word boundary matching — match the keyword as a complete phrase
+        escaped = re.escape(kw)
+        pattern = r"(?<!\w)" + escaped + r"(?!\w)"
+        if re.search(pattern, symptoms_text, re.IGNORECASE) and not _is_negated(kw, symptoms_text):
+            matched.append(kw)
+    return matched
+
+
 def _heuristic_triage(request: TriageRequest) -> TriageResponse:
     """
-    Deterministic clinical heuristic fallback algorithm when Gemini API is unavailable or offline.
-    Quantifies vital signs, shock index, and high-acuity symptom triggers (e.g. hemorrhage, respiratory failure).
+    Deterministic clinical heuristic fallback algorithm.
+    Always runs first (Task 8d requirement: heuristic first, then take higher urgency).
     """
-    symptoms = request.symptoms.lower()
+    symptoms = request.symptoms.lower().strip()
     vitals = request.vitals
-    
-    indicators = []
-    
-    # Extract & evaluate vitals
-    systolic_bp, diastolic_bp = _parse_blood_pressure(vitals.blood_pressure if vitals else None)
-    
-    is_hypoxic_critical = vitals and vitals.spo2_percent is not None and vitals.spo2_percent < 90.0
-    is_hypoxic_moderate = vitals and vitals.spo2_percent is not None and 90.0 <= vitals.spo2_percent < 94.0
-    
-    is_severe_tachycardia = vitals and vitals.heart_rate_bpm is not None and vitals.heart_rate_bpm > 130
-    is_moderate_tachycardia = vitals and vitals.heart_rate_bpm is not None and 100 < vitals.heart_rate_bpm <= 130
-    is_severe_bradycardia = vitals and vitals.heart_rate_bpm is not None and vitals.heart_rate_bpm < 50
-    
-    is_hypotensive_shock = systolic_bp is not None and systolic_bp < 90
-    is_hypertensive_crisis = (systolic_bp is not None and systolic_bp >= 180) or (diastolic_bp is not None and diastolic_bp >= 110)
-    
-    # Calculate Shock Index = HR / Systolic BP (normal: 0.5 - 0.7; shock: >= 0.9)
-    shock_index_elevated = False
-    if vitals and vitals.heart_rate_bpm and systolic_bp and systolic_bp > 0:
-        shock_index = vitals.heart_rate_bpm / systolic_bp
-        if shock_index >= 0.9:
-            shock_index_elevated = True
-            indicators.append(f"Elevated Shock Index ({shock_index:.2f} - Hemodynamic/Hypovolemic Stress)")
 
-    is_hyperpyrexia = vitals and vitals.temperature_f is not None and vitals.temperature_f >= 103.5
-    is_high_fever = vitals and vitals.temperature_f is not None and 101.5 <= vitals.temperature_f < 103.5
-    
-    # Populate vital indicators
+    indicators: list[str] = []
+
+    systolic_bp, diastolic_bp = _parse_blood_pressure(vitals.blood_pressure if vitals else None)
+
+    spo2 = vitals.spo2_percent if vitals else None
+    hr = vitals.heart_rate_bpm if vitals else None
+    temp_f = vitals.temperature_f if vitals else None
+
+    # ─── Vital sign evaluation ───
+    is_hypoxic_critical = spo2 is not None and spo2 < CRITICAL_SPO2_THRESHOLD
+    is_hypoxic_moderate = spo2 is not None and CRITICAL_SPO2_THRESHOLD <= spo2 < MODERATE_SPO2_THRESHOLD
+
+    is_severe_tachycardia = hr is not None and hr > SEVERE_TACHYCARDIA_THRESHOLD
+    # TODO(clinician-review): Moderate tachycardia threshold — confirm with cardiac protocol.
+    is_moderate_tachycardia = hr is not None and MODERATE_TACHYCARDIA_THRESHOLD < hr <= SEVERE_TACHYCARDIA_THRESHOLD
+    # TODO(clinician-review): Pediatric bradycardia threshold differs from adults.
+    is_critical_bradycardia = hr is not None and hr < CRITICAL_BRADYCARDIA_THRESHOLD
+
+    is_hypotensive_shock = systolic_bp is not None and systolic_bp < SHOCK_SYSTOLIC_THRESHOLD
+    is_hypertensive_crisis = (systolic_bp is not None and systolic_bp >= HYPERTENSIVE_CRISIS_SYSTOLIC) or (
+        diastolic_bp is not None and diastolic_bp >= HYPERTENSIVE_CRISIS_DIASTOLIC
+    )
+
+    # ─── Pediatric age band checks ───
+    # TODO(clinician-review): Pediatric age bands require pediatric protocol validation.
+    age = request.age
+    is_pediatric = age is not None and age < PEDIATRIC_AGE_THRESHOLD
+    # TODO(clinician-review): Infant age cutoff (12 months) should be confirmed by pediatrician.
+    is_infant = age is not None and age < 1
+    is_neonate = age is not None and age < (NEONATAL_AGE_DAYS / 365.25)
+
+    # Shock Index = HR / SBP (normal: 0.5-0.7; shock: >= 0.9)
+    # TODO(clinician-review): Shock index is validated for adults only; pediatric patients have different norms.
+    shock_index_elevated = False
+    if hr and systolic_bp and systolic_bp > 0 and not is_pediatric:
+        shock_index = hr / systolic_bp
+        if shock_index >= SHOCK_INDEX_THRESHOLD:
+            shock_index_elevated = True
+            indicators.append(f"Elevated Shock Index ({shock_index:.2f})")
+
+    is_hyperpyrexia = temp_f is not None and temp_f >= HYPERPYREXIA_F_THRESHOLD
+    is_high_fever = temp_f is not None and HIGH_FEVER_F_THRESHOLD <= temp_f < HYPERPYREXIA_F_THRESHOLD
+
+    # Pediatric bradycardia — only for infants/neonates, not all pediatric
+    # TODO(clinician-review): Neonatal bradycardia threshold should be validated by pediatrician.
+    if is_neonate:
+        pediatric_bradycardia = hr is not None and hr < PEDIATRIC_NEONATAL_HR_MIN
+    elif is_infant:
+        pediatric_bradycardia = hr is not None and hr < PEDIATRIC_INFANT_HR_MIN
+    else:
+        pediatric_bradycardia = False
+
     if is_hypoxic_critical:
-        indicators.append(f"Critical SpO2 Desaturation ({vitals.spo2_percent}%)")
+        indicators.append(f"Critical SpO2 Desaturation ({spo2}%)")
     elif is_hypoxic_moderate:
-        indicators.append(f"Moderate Hypoxemia (SpO2 {vitals.spo2_percent}%)")
-        
+        indicators.append(f"Moderate Hypoxemia (SpO2 {spo2}%)")
+
     if is_hypotensive_shock:
         indicators.append(f"Severe Hypotension / Shock State ({systolic_bp}/{diastolic_bp} mmHg)")
     elif is_hypertensive_crisis:
         indicators.append(f"Hypertensive Crisis ({systolic_bp}/{diastolic_bp} mmHg)")
 
     if is_severe_tachycardia:
-        indicators.append(f"Severe Tachycardia ({vitals.heart_rate_bpm} BPM)")
-    elif is_severe_bradycardia:
-        indicators.append(f"Critical Bradycardia ({vitals.heart_rate_bpm} BPM)")
+        indicators.append(f"Severe Tachycardia ({hr} BPM)")
+    elif is_critical_bradycardia or pediatric_bradycardia:
+        indicators.append(f"Critical Bradycardia ({hr} BPM)")
 
     if is_hyperpyrexia:
-        indicators.append(f"Hyperpyrexia ({vitals.temperature_f}°F)")
+        indicators.append(f"Hyperpyrexia ({temp_f}°F)")
 
-    # ─── 1. EMERGENCY Urgency Criteria (Priority 90-100) ───
-    # Bleeding / Hemorrhage critical terms
-    hemorrhage_triggers = [
-        'too much blood', 'heavy bleeding', 'severe bleeding', 'profuse bleeding',
-        'blood gushing', 'uncontrolled bleeding', 'massive blood loss', 'arterial bleeding',
-        'vomiting blood', 'hematemesis', 'coughing blood', 'hemoptysis', 'bleeding heavily',
-        'rectal bleeding', 'melena', 'wound bleeding profusely', 'head hemorrhage'
-    ]
-    
-    cardio_respiratory_triggers = [
-        'chest pain', 'heart attack', 'cardiac arrest', 'unconscious', 'unresponsive',
-        'stroke', 'facial droop', 'slurred speech', 'paralysis', 'breathing difficulty',
-        'severe shortness of breath', 'gasping', 'dyspnea', 'anaphylaxis', 'choking',
-        'cyanosis', 'severe head injury', 'gunshot', 'stab wound'
-    ]
-    
-    emergency_keywords = hemorrhage_triggers + cardio_respiratory_triggers
-    matched_emergency = [k for k in emergency_keywords if k in symptoms]
+    # ─── 1. EMERGENCY ───
+    matched_emergency = _match_symptoms(symptoms, EMERGENCY_SYMPTOMS)
 
-    if matched_emergency or is_hypoxic_critical or is_hypotensive_shock or shock_index_elevated:
+    # Negation overrides: "history of asthma" or "heartburn" should not trigger
+    # TODO(clinician-review): Expand negation override dictionary based on clinical review.
+    for symptom_check, overrides in NEGATION_OVERRIDES.items():
+        if symptom_check in matched_emergency:
+            for override_kw in overrides:
+                if override_kw in symptoms:
+                    matched_emergency = [s for s in matched_emergency if s != symptom_check]
+                    indicators.append(f"Negated: '{override_kw}' suppresses '{symptom_check}' emergency trigger")
+
+    if matched_emergency or is_hypoxic_critical or is_hypotensive_shock or shock_index_elevated or is_hyperpyrexia:
         if matched_emergency:
             indicators.append(f"Acute emergency trigger: {', '.join(matched_emergency[:2])}")
-            
+
         dept = "Emergency & Resuscitation / Trauma Center"
-        if any(k in symptoms for k in ['chest pain', 'heart attack', 'cardiac']):
+        if "chest pain" in matched_emergency:
             dept = "Emergency Resuscitation / Cardiology"
-        elif any(k in symptoms for k in ['stroke', 'paralysis', 'slurred speech']):
+        elif any(k in matched_emergency for k in ["stroke", "paralysis", "slurred speech"]):
             dept = "Emergency Resuscitation / Stroke Unit"
 
         return TriageResponse(
             urgency="emergency",
-            priority_score=96,
+            priority_score=EMERGENCY_SCORE_MAX - 4,
             recommended_department=dept,
             estimated_wait_minutes=0,
             diagnostic_indicators=indicators or ["Critical life-threat acuity marker"],
             reasoning="Critical life-threat symptoms, severe hemorrhage, or vital decompensation detected. Immediate physician intervention required without OPD queuing.",
-            confidence_score=0.98,
-            source="heuristic_fallback"
+            source="heuristic_fallback",
         )
 
-    # ─── 2. HIGH Urgency Criteria (Priority 70-89) ───
-    high_keywords = [
-        'fracture', 'broken bone', 'high fever', 'asthma', 'severe pain', 'severe abdominal',
-        'burn', 'palpitation', 'dehydration', 'seizure', 'convulsion', 'diabetic',
-        'ketoacidosis', 'kidney stone', 'acute pancreatitis', 'moderate bleeding'
-    ]
-    matched_high = [k for k in high_keywords if k in symptoms]
+    # ─── 2. HIGH ───
+    matched_high = _match_symptoms(symptoms, HIGH_SYMPTOMS)
 
-    if matched_high or is_high_fever or is_hyperpyrexia or is_hypoxic_moderate or is_severe_tachycardia or is_hypertensive_crisis:
+    if (
+        matched_high
+        or is_high_fever
+        or is_hyperpyrexia
+        or is_hypoxic_moderate
+        or is_severe_tachycardia
+        or is_hypertensive_crisis
+        or is_critical_bradycardia
+        or pediatric_bradycardia
+    ):
         if matched_high:
             indicators.append(f"Acute high-priority indicator: {', '.join(matched_high[:2])}")
         return TriageResponse(
             urgency="high",
-            priority_score=80,
+            priority_score=HIGH_SCORE_MAX,
             recommended_department="Urgent Care / Internal Medicine",
             estimated_wait_minutes=10,
             diagnostic_indicators=indicators or ["Elevated clinical urgency triggers"],
             reasoning="Significant physiological stress, acute distress, or moderate vital disturbance identified. Expedited clinical review scheduled.",
-            confidence_score=0.93,
-            source="heuristic_fallback"
+            source="heuristic_fallback",
         )
 
-    # ─── 3. MEDIUM Urgency Criteria (Priority 40-69) ───
-    med_keywords = [
-        'cough', 'fever', 'vomiting', 'headache', 'sprain', 'infection',
-        'diarrhea', 'rash', 'urinary', 'throat pain', 'earache', 'mild bleeding',
-        'nausea', 'back pain', 'stomach ache', 'allergy'
-    ]
-    matched_med = [k for k in med_keywords if k in symptoms]
+    # ─── 3. MEDIUM ───
+    matched_med = _match_symptoms(symptoms, MEDIUM_SYMPTOMS)
 
     if matched_med or is_moderate_tachycardia:
         if matched_med:
             indicators.append(f"Sub-acute symptom presentation: {', '.join(matched_med[:2])}")
         return TriageResponse(
             urgency="medium",
-            priority_score=52,
+            priority_score=MEDIUM_SCORE_MIN + 12,
             recommended_department="General Medicine OPD",
             estimated_wait_minutes=25,
             diagnostic_indicators=indicators or ["Acute symptomatic presentation without vital compromise"],
             reasoning="Moderate acute presentation with stable baseline vitals suitable for standard outpatient consultation.",
-            confidence_score=0.91,
-            source="heuristic_fallback"
+            source="heuristic_fallback",
         )
 
-    # ─── 4. LOW Urgency Criteria (Priority 1-39) ───
+    # ─── 4. LOW ───
     return TriageResponse(
         urgency="low",
-        priority_score=25,
+        priority_score=LOW_SCORE_MAX - 5,
         recommended_department="General OPD / Preventive Health",
         estimated_wait_minutes=40,
         diagnostic_indicators=["Stable, non-acute presentation"],
         reasoning="Routine clinical consultation, checkup, or mild chronic follow-up.",
-        confidence_score=0.95,
-        source="heuristic_fallback"
+        source="heuristic_fallback",
     )
 
 
-async def analyze_clinical_triage(request: TriageRequest) -> TriageResponse:
+def _band_to_priority(urgency: str) -> int:
+    """Return a representative score clamped within the band of the given urgency."""
+    return clamp_score(0, urgency)
+
+
+async def _call_gemini(request: TriageRequest, client: httpx.AsyncClient) -> TriageResponse | None:
     """
-    Asynchronously analyze clinical triage using Google Gemini API with fallback resilience.
+    Call the Gemini API with the request.
+    Returns a TriageResponse on success, or None on failure (caller falls back to heuristic).
+    Uses x-goog-api-key header instead of URL parameter.
     """
-    # If Gemini is not configured or disabled, use heuristic engine
-    if not GEMINI_API_KEY or GEMINI_API_KEY == "your_gemini_api_key_here":
-        logger.info("Using heuristic triage engine (Gemini API key not configured).")
-        return _heuristic_triage(request)
+    if not GEMINI_API_KEY:
+        return None
 
-    try:
-        # Build prompt payload
-        patient_info = {
-            "symptoms": request.symptoms,
-            "age": request.age,
-            "gender": request.gender,
-            "medical_history": request.medical_history,
-            "allergies": request.allergies,
-            "vitals": request.vitals.model_dump() if request.vitals else None
-        }
+    if not GEMINI_MODEL:
+        logger.warning("GEMINI_MODEL is not set — falling back to heuristic triage.")
+        return None
 
-        full_prompt = f"{TRIAGE_SYSTEM_PROMPT}\n\nPatient Clinical Data:\n{json.dumps(patient_info, indent=2)}"
+    patient_info = {
+        "symptoms": request.symptoms,
+        "age": request.age,
+        "gender": request.gender,
+        "medical_history": request.medical_history,
+        "allergies": request.allergies,
+        "vitals": request.vitals.model_dump() if request.vitals else None,
+    }
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
-        headers = {"Content-Type": "application/json"}
-        payload = {
-            "contents": [{
-                "parts": [{"text": full_prompt}]
-            }],
-            "generationConfig": {
-                "response_mime_type": "application/json",
-                "temperature": 0.2
-            }
-        }
+    full_prompt = f"{TRIAGE_SYSTEM_PROMPT}\n\nPatient Clinical Data:\n{json.dumps(patient_info, indent=2)}"
 
-        async with httpx.AsyncClient(timeout=10.0) as client:
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+    headers = {
+        "Content-Type": "application/json",
+        "x-goog-api-key": GEMINI_API_KEY,
+    }
+    payload = {
+        "contents": [{"parts": [{"text": full_prompt}]}],
+        "generationConfig": {
+            "response_mime_type": "application/json",
+            "temperature": 0.2,
+        },
+    }
+
+    max_retries = 1
+    for attempt in range(max_retries + 1):
+        try:
             response = await client.post(url, headers=headers, json=payload)
             response.raise_for_status()
             res_json = response.json()
@@ -243,22 +347,82 @@ async def analyze_clinical_triage(request: TriageRequest) -> TriageResponse:
             candidate_text = res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
             data = json.loads(candidate_text)
 
-            # Validate urgency value
             urgency = data.get("urgency", "medium").lower()
             if urgency not in ["emergency", "high", "medium", "low"]:
                 urgency = "medium"
 
+            priority = int(data.get("priority_score", _band_to_priority(urgency)))
+            # Clamp priority_score into the band of the returned urgency
+            priority = clamp_score(priority, urgency)
+
             return TriageResponse(
                 urgency=urgency,
-                priority_score=int(data.get("priority_score", 50)),
+                priority_score=priority,
                 recommended_department=str(data.get("recommended_department", "General OPD")),
                 estimated_wait_minutes=int(data.get("estimated_wait_minutes", 20)),
                 diagnostic_indicators=list(data.get("diagnostic_indicators", [])),
                 reasoning=str(data.get("reasoning", "AI triage evaluated clinical complaint.")),
-                confidence_score=float(data.get("confidence_score", 0.94)),
-                source="gemini"
+                source="gemini",
             )
 
-    except Exception as e:
-        logger.warning(f"Gemini API triage call encountered notice: {str(e)}. Triggering fallback.")
-        return _heuristic_triage(request)
+        except (httpx.HTTPStatusError, json.JSONDecodeError, KeyError, ValueError, TypeError) as e:
+            logger.warning(f"Gemini API triage call failed (attempt {attempt + 1}): {e!s}")
+            if attempt >= max_retries:
+                logger.info("Gemini API triage failed after retry — falling back to heuristic.")
+                return None
+            await asyncio.sleep(0.5)
+        except httpx.TimeoutException:
+            logger.warning(f"Gemini API triage timed out (attempt {attempt + 1})")
+            if attempt >= max_retries:
+                logger.info("Gemini API triage timed out after retry — falling back to heuristic.")
+                return None
+            await asyncio.sleep(0.5)
+        except Exception as e:
+            logger.warning(f"Gemini API triage encountered unexpected error (attempt {attempt + 1}): {e!s}")
+            if attempt >= max_retries:
+                return None
+            await asyncio.sleep(0.5)
+
+    return None
+
+
+def _higher_urgency(resp1: TriageResponse, resp2: TriageResponse) -> TriageResponse:
+    """
+    Return the response with the higher urgency band (Task 8d).
+    When bands are tied, prefer the one with the higher priority_score,
+    falling back to resp2 (Gemini) when scores are equal.
+    """
+    band1 = urgency_to_band(resp1.urgency)
+    band2 = urgency_to_band(resp2.urgency)
+
+    if band1 > band2:
+        return resp1
+    if band2 > band1:
+        return resp2
+    # Bands tied — prefer higher priority_score, then resp2 (Gemini)
+    if resp1.priority_score >= resp2.priority_score:
+        return resp1
+    return resp2
+
+
+async def analyze_clinical_triage(request: TriageRequest) -> TriageResponse:
+    """
+    Triage pipeline: always runs the rule-based heuristic engine first,
+    then optionally calls Gemini, and returns the HIGHER urgency of the two.
+    """
+    heuristic_result = _heuristic_triage(request)
+
+    # If Gemini is not configured, return heuristic result
+    if not GEMINI_API_KEY or not GEMINI_MODEL:
+        logger.info("Using heuristic triage engine (Gemini API key or model not configured).")
+        return heuristic_result
+
+    client = _get_shared_client()
+    gemini_result = await _call_gemini(request, client)
+
+    if gemini_result is None:
+        logger.info("Gemini triage failed — returning heuristic result.")
+        return heuristic_result
+
+    # Return the HIGHER urgency of rules and Gemini
+    return _higher_urgency(heuristic_result, gemini_result)

@@ -1,6 +1,5 @@
 """Gunicorn production configuration for SwasthaTrack API on Render."""
 
-import multiprocessing
 import os
 
 # Render automatically sets PORT (defaults to 8000)

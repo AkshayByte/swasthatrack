@@ -1,6 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
+
+from models.medicine import Medicine
 from models.patient import Patient
 
 
@@ -218,3 +220,144 @@ def test_prescribed_by_uses_authenticated_user(client: TestClient, doctor_token:
     assert data["doctor_name"] != "Fake Doctor"
     assert data["doctor_name"] != "Fake Prescriber"
     assert data["doctor_name"]  # Must have the real authenticated user's name
+
+
+# ─── Task 6: Real inventory deduction ─────────────────────────────────────────
+
+def _create_medicine(db_session: Session, name: str, stock: int):
+    med = Medicine(
+        name=name,
+        generic_name=name,
+        manufacturer="Test Labs",
+        current_stock=stock,
+        minimum_stock=0,
+        unit_price=5.0,
+        is_active=True,
+    )
+    db_session.add(med)
+    db_session.commit()
+    db_session.refresh(med)
+    return med
+
+
+def test_dispense_decrements_stock(client: TestClient, db_session: Session, doctor_token: str, pharmacist_token: str, sample_patient: Patient):
+    """Dispensing a prescription must decrement medicine stock in the database."""
+    med = _create_medicine(db_session, "Amoxicillin 500mg", stock=10)
+
+    rx = client.post(
+        "/api/prescriptions/",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={"patient_id": sample_patient.id, "medicines": [{"name": med.name, "quantity": 3}]}
+    )
+    rx_id = rx.json()["id"]
+
+    res = client.put(
+        f"/api/prescriptions/{rx_id}/status",
+        headers={"Authorization": f"Bearer {pharmacist_token}"},
+        json={"status": "dispensed"}
+    )
+    assert res.status_code == 200
+
+    db_session.expire_all()
+    updated = db_session.query(Medicine).filter(Medicine.id == med.id).first()
+    assert updated.current_stock == 7  # 10 - 3
+
+
+def test_dispense_fails_on_insufficient_stock(client: TestClient, db_session: Session, doctor_token: str, pharmacist_token: str, sample_patient: Patient):
+    """Dispensing must fail with 409 if stock is insufficient, and not change status."""
+    med = _create_medicine(db_session, "Paracetamol 650mg", stock=1)
+
+    rx = client.post(
+        "/api/prescriptions/",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={"patient_id": sample_patient.id, "medicines": [{"name": med.name, "quantity": 3}]}
+    )
+    rx_id = rx.json()["id"]
+
+    res = client.put(
+        f"/api/prescriptions/{rx_id}/status",
+        headers={"Authorization": f"Bearer {pharmacist_token}"},
+        json={"status": "dispensed"}
+    )
+    assert res.status_code == 409
+    assert "insufficient stock" in res.json()["detail"].lower()
+
+    db_session.expire_all()
+    updated = db_session.query(Medicine).filter(Medicine.id == med.id).first()
+    assert updated.current_stock == 1
+
+
+def test_dispense_rejects_expired_medicine(client: TestClient, db_session: Session, doctor_token: str, pharmacist_token: str, sample_patient: Patient):
+    """Dispensing must fail with 409 if any medicine is expired."""
+    from datetime import date, timedelta
+    med = _create_medicine(db_session, "Expired Med", stock=5)
+    med.expiry_date = date.today() - timedelta(days=1)
+    db_session.commit()
+
+    rx = client.post(
+        "/api/prescriptions/",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={"patient_id": sample_patient.id, "medicines": [{"name": med.name, "quantity": 1}]}
+    )
+    rx_id = rx.json()["id"]
+
+    res = client.put(
+        f"/api/prescriptions/{rx_id}/status",
+        headers={"Authorization": f"Bearer {pharmacist_token}"},
+        json={"status": "dispensed"}
+    )
+    assert res.status_code == 409
+    assert "expired" in res.json()["detail"].lower()
+
+
+def test_cancel_does_not_decrement_stock(client: TestClient, db_session: Session, doctor_token: str, pharmacist_token: str, sample_patient: Patient):
+    """Cancelling a prescription must NOT decrement stock."""
+    med = _create_medicine(db_session, "Ibuprofen 400mg", stock=10)
+
+    rx = client.post(
+        "/api/prescriptions/",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={"patient_id": sample_patient.id, "medicines": [{"name": med.name, "quantity": 2}]}
+    )
+    rx_id = rx.json()["id"]
+
+    res = client.put(
+        f"/api/prescriptions/{rx_id}/status",
+        headers={"Authorization": f"Bearer {pharmacist_token}"},
+        json={"status": "cancelled"}
+    )
+    assert res.status_code == 200
+
+    db_session.expire_all()
+    updated = db_session.query(Medicine).filter(Medicine.id == med.id).first()
+    assert updated.current_stock == 10  # Unchanged
+
+
+def test_double_dispense_rolls_back_stock(client: TestClient, db_session: Session, doctor_token: str, pharmacist_token: str, sample_patient: Patient):
+    """Second dispense attempt must not further decrement stock (idempotent-safe)."""
+    med = _create_medicine(db_session, "Vitamin C 500mg", stock=5)
+
+    rx = client.post(
+        "/api/prescriptions/",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={"patient_id": sample_patient.id, "medicines": [{"name": med.name, "quantity": 2}]}
+    )
+    rx_id = rx.json()["id"]
+
+    first = client.put(
+        f"/api/prescriptions/{rx_id}/status",
+        headers={"Authorization": f"Bearer {pharmacist_token}"},
+        json={"status": "dispensed"}
+    )
+    assert first.status_code == 200
+
+    second = client.put(
+        f"/api/prescriptions/{rx_id}/status",
+        headers={"Authorization": f"Bearer {pharmacist_token}"},
+        json={"status": "dispensed"}
+    )
+    assert second.status_code == 409
+
+    db_session.expire_all()
+    updated = db_session.query(Medicine).filter(Medicine.id == med.id).first()
+    assert updated.current_stock == 3  # 5 - 2, not 5 - 4

@@ -1,6 +1,8 @@
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
+
 from models.user import User
+
 
 def test_register_user(client: TestClient, db_session: Session):
     response = client.post(
@@ -16,7 +18,7 @@ def test_register_user(client: TestClient, db_session: Session):
     data = response.json()
     assert data["email"] == "newuser@example.com"
     assert "id" in data
-    
+
     # Verify user in database
     user = db_session.query(User).filter(User.email == "newuser@example.com").first()
     assert user is not None
@@ -77,6 +79,7 @@ def test_get_current_user_invalid_token(client: TestClient):
 
 from unittest.mock import patch
 
+
 def test_google_login_invalid_token(client: TestClient):
     with patch("google.oauth2.id_token.verify_oauth2_token", side_effect=ValueError("Token expired or malformed")):
         response = client.post(
@@ -134,7 +137,7 @@ def test_rate_limiting_on_auth_endpoint(client: TestClient):
                 json={"email": f"ratelimit_{i}@test.com", "password": "wrongpassword"}
             )
             status_codes.append(res.status_code)
-        
+
         # 429 should appear after exceeding the 10/minute limit
         assert 429 in status_codes
     finally:

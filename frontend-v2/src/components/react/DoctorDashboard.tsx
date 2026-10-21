@@ -1,31 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { SwasthaAPI, type Patient, type QueueEntry } from '../../lib/api';
+import { SwasthaAPI, type Patient, type QueueEntry, type QueueStatus } from '../../lib/api';
 import { Stethoscope, Pill, FlaskConical, AlertCircle, CheckCircle2, HeartPulse, FileText, Send, Sparkles, Activity, Thermometer, Droplet, Clock } from 'lucide-react';
 import {
   priorityBadge, statusBadge,
   btnPrimary, btnSuccess, btnDanger, btnGhost,
   inputClass, selectClass, textareaClass,
-  card, cardHeader, label, pageHeader, statPill, toast as toastCls,
+  card, cardHeader, label, pageHeader, statPill, toast as toastCls, alertDanger,
   listItem, listItemSelected, listItemEmergency,
 } from '../../lib/ui';
 
-const fallbackPatients: Patient[] = [
-  { id: 1, registration_number: 'PAT-2026-001', name: 'Rajesh Sharma', age: 45, gender: 'Male', phone: '+91 98765 43210', blood_group: 'B+', allergies: ['Penicillin', 'Sulfa Drugs'], chronic_conditions: ['Hypertension', 'Mild Asthma'], emergency_contact: 'Sunita Sharma (+91 98765 43211)', status: 'active', created_at: new Date().toISOString() },
-  { id: 2, registration_number: 'PAT-2026-002', name: 'Anita Patel', age: 32, gender: 'Female', phone: '+91 98111 22334', blood_group: 'O+', allergies: [], chronic_conditions: ['Type-2 Diabetes'], emergency_contact: 'Karan Patel (+91 98111 22335)', status: 'active', created_at: new Date().toISOString() },
-  { id: 3, registration_number: 'PAT-2026-003', name: 'Mohan Lal Verma', age: 58, gender: 'Male', phone: '+91 97222 33445', blood_group: 'A+', allergies: ['Aspirin'], chronic_conditions: ['Ischemic Heart Disease'], emergency_contact: 'Ramesh Verma (+91 97222 33446)', status: 'active', created_at: new Date().toISOString() },
-];
-
-const fallbackQueue: QueueEntry[] = [
-  { id: 101, patient_id: 1, patient_name: 'Rajesh Sharma', service_type: 'Cardiology OPD', priority: 'high', status: 'in-consultation', queue_number: 'Q-101', estimated_wait_time: 15, notes: 'Substernal chest tightness radiating to left shoulder on exertion', created_at: new Date().toISOString() },
-  { id: 102, patient_id: 2, patient_name: 'Anita Patel', service_type: 'Endocrinology OPD', priority: 'medium', status: 'waiting', queue_number: 'Q-102', estimated_wait_time: 25, notes: 'Elevated fasting blood sugar (164 mg/dL), polyuria and fatigue', created_at: new Date().toISOString() },
-  { id: 103, patient_id: 3, patient_name: 'Mohan Lal Verma', service_type: 'General Medicine', priority: 'emergency', status: 'waiting', queue_number: 'Q-103', estimated_wait_time: 0, notes: 'Severe dizziness, BP 170/105 mmHg, blurred vision', created_at: new Date().toISOString() },
-];
+const ACTIVE_QUEUE_STATUSES: QueueStatus[] = ['waiting', 'called', 'in-progress'];
 
 export default function DoctorDashboard() {
-  const [queue, setQueue] = useState<QueueEntry[]>(fallbackQueue);
-  const [patients, setPatients] = useState<Patient[]>(fallbackPatients);
-  const [selectedQueueItem, setSelectedQueueItem] = useState<QueueEntry>(fallbackQueue[0]);
-  const [selectedPatient, setSelectedPatient] = useState<Patient>(fallbackPatients[0]);
+  const [queue, setQueue] = useState<QueueEntry[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [selectedQueueItem, setSelectedQueueItem] = useState<QueueEntry | null>(null);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
   const [diagnosis, setDiagnosis] = useState('Acute Exertional Angina / Hypertensive Urgency');
   const [clinicalNotes, setClinicalNotes] = useState('Patient exhibits mild diaphoresis. Advised bed rest, immediate sublingual nitroglycerin and urgent Cardiac Biomarkers workup.');
@@ -44,24 +34,62 @@ export default function DoctorDashboard() {
   const [labPriority, setLabPriority] = useState<'routine' | 'urgent' | 'stat'>('stat');
 
   const [notification, setNotification] = useState('');
+  const [error, setError] = useState('');
 
   const loadData = async () => {
     try {
       const [qList, pList] = await Promise.all([SwasthaAPI.getQueue(), SwasthaAPI.getPatients()]);
-      if (qList && qList.length > 0) {
-        const pw: Record<string, number> = { emergency: 4, high: 3, medium: 2, low: 1 };
-        const sorted = [...qList].sort((a, b) => (pw[b.priority] || 0) - (pw[a.priority] || 0));
-        setQueue(sorted); setSelectedQueueItem(sorted[0]);
+
+      // Filter to active statuses only (waiting, called, in-progress)
+      const activeQueue = (qList || []).filter(q => ACTIVE_QUEUE_STATUSES.includes(q.status));
+      // Sort by priority (emergency first)
+      const pw: Record<string, number> = { emergency: 4, high: 3, medium: 2, low: 1 };
+      const sortedQueue = activeQueue.sort((a, b) => (pw[b.priority] || 0) - (pw[a.priority] || 0));
+
+      setQueue(sortedQueue);
+      setPatients(pList || []);
+      // Auto-select first patient if not already selected
+      if (sortedQueue.length > 0 && !selectedQueueItem) {
+        setSelectedQueueItem(sortedQueue[0]);
       }
-      if (pList && pList.length > 0) { setPatients(pList); setSelectedPatient(pList[0]); }
-    } catch {}
+      if ((pList || []).length > 0 && !selectedPatient) {
+        setSelectedPatient(pList[0]);
+      }
+      setError('');
+    } catch (err: any) {
+      setError('Failed to load queue data. Please refresh the page.');
+      console.error(err);
+    }
   };
 
-  useEffect(() => { loadData(); }, []);
+  // Initial load + 10-second polling (paused when tab is hidden)
+  useEffect(() => {
+    loadData();
+
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        loadData();
+      }
+    }, 10000);
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadData();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedQueueItem, selectedPatient]);
 
   const handleSelectPatient = (item: QueueEntry) => {
     setSelectedQueueItem(item);
-    setSelectedPatient(patients.find(p => p.id === item.patient_id) || patients[0]);
+    const patient = patients.find(p => p.id === item.patient_id);
+    if (patient) setSelectedPatient(patient);
   };
 
   const handleAddMed = () => {
@@ -130,6 +158,15 @@ export default function DoctorDashboard() {
         </div>
       </div>
 
+      {/* Error Banner */}
+      {error && (
+        <div className={alertDanger}>
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span className="flex-1">{error}</span>
+          <button onClick={() => setError('')} className="text-xs font-semibold text-rose-700 dark:text-rose-300 hover:underline shrink-0">Dismiss</button>
+        </div>
+      )}
+
       {/* Toast */}
       {notification && (
         <div className={toastCls}>
@@ -155,7 +192,12 @@ export default function DoctorDashboard() {
             </div>
 
             <div className="space-y-2 max-h-[680px] overflow-y-auto pr-1">
-              {queue.map(item => {
+              {queue.length === 0 ? (
+                <div className="text-center py-8 text-slate-400 dark:text-slate-500 text-sm">
+                  No patients in the active queue. All caught up!
+                </div>
+              ) : (
+                queue.map(item => {
                 const isSelected = selectedQueueItem?.id === item.id;
                 const isEmergency = item.priority === 'emergency';
                 return (
@@ -174,7 +216,7 @@ export default function DoctorDashboard() {
                     )}
                   </div>
                 );
-              })}
+              }))}
             </div>
           </div>
         </div>

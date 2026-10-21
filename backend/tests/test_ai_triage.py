@@ -1,6 +1,7 @@
 import pytest
+
 from schemas.queue import TriageRequest, VitalsInput
-from utils.gemini_triage import analyze_clinical_triage, _heuristic_triage
+from utils.gemini_triage import analyze_clinical_triage
 
 
 @pytest.mark.asyncio
@@ -15,7 +16,6 @@ async def test_heuristic_emergency_triage():
     assert result.urgency == "emergency"
     assert result.priority_score >= 90
     assert result.estimated_wait_minutes == 0
-    assert result.confidence_score >= 0.90
     assert len(result.diagnostic_indicators) > 0
 
 
@@ -46,7 +46,6 @@ async def test_heuristic_high_urgency_triage():
     assert result.urgency == "high"
     assert result.priority_score >= 70
     assert result.estimated_wait_minutes <= 15
-    assert result.confidence_score >= 0.85
 
 
 @pytest.mark.asyncio
@@ -60,7 +59,6 @@ async def test_heuristic_routine_low_triage():
     assert result.urgency == "low"
     assert result.priority_score <= 40
     assert result.estimated_wait_minutes >= 30
-    assert result.confidence_score >= 0.90
 
 
 def test_api_queue_ai_triage_endpoint(client, admin_token):
@@ -83,8 +81,7 @@ def test_api_queue_ai_triage_endpoint(client, admin_token):
     assert data["urgency"] in ["emergency", "high", "medium", "low"]
     assert "priority_score" in data
     assert "recommended_department" in data
-    assert "confidence_score" in data
-    assert data["confidence_score"] >= 0.85
+    assert "source" in data
     assert "diagnostic_indicators" in data
     assert "reasoning" in data
 

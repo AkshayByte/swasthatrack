@@ -1,24 +1,27 @@
+import json
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List, Optional
-import json
-from datetime import datetime, timezone, timedelta
 
 from database import get_db
-from models.prescription import Prescription as PrescriptionModel, PrescriptionStatus
+from models.medicine import Medicine
 from models.patient import Patient as PatientModel
+from models.prescription import Prescription as PrescriptionModel
+from models.prescription import PrescriptionItem, PrescriptionStatus
 from models.user import User
 from routes.auth import get_current_user
 from schemas.prescription import (
     PrescriptionCreateRequest,
-    PrescriptionStatusUpdate,
     PrescriptionResponse,
+    PrescriptionStatusUpdate,
 )
+from utils.audit import log_read, log_write
 
 router = APIRouter()
 
 
-def _format_prescription(rx: PrescriptionModel, patient_name: Optional[str] = None) -> dict:
+def _format_prescription(rx: PrescriptionModel, patient_name: str | None = None) -> dict:
     meds = []
     if rx.medicines:
         if isinstance(rx.medicines, list):
@@ -42,9 +45,9 @@ def _format_prescription(rx: PrescriptionModel, patient_name: Optional[str] = No
     }
 
 
-@router.get("/", response_model=List[PrescriptionResponse])
+@router.get("/", response_model=list[PrescriptionResponse])
 def get_prescriptions(
-    status: Optional[str] = None,
+    status: str | None = None,
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
@@ -62,6 +65,7 @@ def get_prescriptions(
         query = query.filter(PrescriptionModel.status == status.lower())
 
     results = query.order_by(PrescriptionModel.created_at.desc()).offset(skip).limit(limit).all()
+    log_read(db, current_user, "prescription", "list")
     return [_format_prescription(rx) for rx in results]
 
 
@@ -109,6 +113,24 @@ def create_prescription(
     db.add(new_rx)
     db.commit()
     db.refresh(new_rx)
+    log_write(db, current_user, "create", "prescription", str(new_rx.id))
+
+    # Create PrescriptionItem records, linking to Medicines by name
+    for med_item in medicines_list:
+        med_name = med_item.get("name", "") if isinstance(med_item, dict) else str(med_item)
+        med = db.query(Medicine).filter(Medicine.name == med_name).first()
+        item = PrescriptionItem(
+            prescription_id=new_rx.id,
+            medicine_id=med.id if med else None,
+            medicine_name=med_name,
+            quantity=med_item.get("quantity", 1) if isinstance(med_item, dict) else 1,
+            dosage=med_item.get("dosage"),
+            frequency=med_item.get("frequency"),
+            duration=med_item.get("duration"),
+            instructions=med_item.get("instructions"),
+        )
+        db.add(item)
+    db.commit()
 
     return _format_prescription(new_rx, patient_name=patient.name)
 
@@ -127,6 +149,7 @@ def get_prescription(
         if not rx.patient or current_user.email != rx.patient.email:
             raise HTTPException(status_code=403, detail="Not authorized to access this clinical prescription")
 
+    log_read(db, current_user, "prescription", str(rx.id))
     return _format_prescription(rx)
 
 
@@ -183,13 +206,32 @@ def update_prescription_status(
             detail=f"Prescription is already '{rx.status}'. Cannot transition to '{new_status}'."
         )
 
+    # If dispensing, decrement inventory for each medicine item
+    if new_status == PrescriptionStatus.DISPENSED.value:
+        items = db.query(PrescriptionItem).filter(PrescriptionItem.prescription_id == rx_id).all()
+        insufficient, expired = Medicine.deduct_stock(db, items)
+        if insufficient or expired:
+            # Roll back the status change — inventory deduction failed
+            db.rollback()
+            detail_parts = []
+            if expired:
+                detail_parts.append(f"Expired medicines: {', '.join(expired)}")
+            if insufficient:
+                detail_parts.append(f"Insufficient stock: {', '.join(insufficient)}")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="; ".join(detail_parts),
+            )
+
     db.commit()
     db.refresh(rx)
+
+    log_write(db, current_user, "update", "prescription", str(rx.id))
 
     return _format_prescription(rx)
 
 
-@router.get("/patient/{patient_id}", response_model=List[PrescriptionResponse])
+@router.get("/patient/{patient_id}", response_model=list[PrescriptionResponse])
 def get_patient_prescriptions(
     patient_id: int,
     db: Session = Depends(get_db),
@@ -204,4 +246,5 @@ def get_patient_prescriptions(
             raise HTTPException(status_code=403, detail="Not authorized to access patient prescriptions")
 
     records = db.query(PrescriptionModel).filter(PrescriptionModel.patient_id == patient_id).all()
+    log_read(db, current_user, "prescription", f"patient:{patient_id}")
     return [_format_prescription(rx, patient_name=patient.name) for rx in records]

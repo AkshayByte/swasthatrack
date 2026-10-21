@@ -45,6 +45,9 @@ export interface Patient {
   created_at?: string;
 }
 
+// Mirror of backend/schemas/queue.py QueueStatus enum
+export type QueueStatus = 'waiting' | 'called' | 'in-progress' | 'completed' | 'cancelled' | 'no-show';
+
 export interface QueueEntry {
   id: number;
   patient_id: number;
@@ -54,7 +57,7 @@ export interface QueueEntry {
   doctor_id?: number;
   doctor_name?: string;
   priority: 'low' | 'medium' | 'high' | 'emergency';
-  status: 'waiting' | 'called' | 'in-progress' | 'in-consultation' | 'completed' | 'cancelled';
+  status: QueueStatus;
   estimated_wait_time: number;
   notes?: string;
   check_in_time?: string;
@@ -116,7 +119,7 @@ export const SwasthaAPI = {
     return res.data;
   },
 
-  async updateQueueStatus(id: number, status: QueueEntry['status']): Promise<void> {
+   async updateQueueStatus(id: number, status: QueueStatus): Promise<void> {
     await apiClient.put(`/queue/${id}/status`, null, { params: { status } });
   },
 
@@ -207,7 +210,6 @@ export const SwasthaAPI = {
     estimatedWaitMinutes: number;
     diagnosticIndicators: string[];
     reasoning: string;
-    confidenceScore: number;
     source: 'gemini' | 'heuristic_fallback';
   } {
     const lower = symptoms.toLowerCase();
@@ -230,7 +232,6 @@ export const SwasthaAPI = {
         estimatedWaitMinutes: 0,
         diagnosticIndicators: indicators.length ? indicators : ['High-acuity emergency trigger'],
         reasoning: 'Critical symptoms detected. Immediate triage bypass to Resuscitation/Cardiology.',
-        confidenceScore: 0.96,
         source: 'heuristic_fallback'
       };
     }
@@ -246,7 +247,6 @@ export const SwasthaAPI = {
         estimatedWaitMinutes: 10,
         diagnosticIndicators: indicators.length ? indicators : ['Elevated urgency trigger'],
         reasoning: 'High-acuity clinical markers detected requiring expedited medical consultation.',
-        confidenceScore: 0.92,
         source: 'heuristic_fallback'
       };
     }
@@ -262,7 +262,6 @@ export const SwasthaAPI = {
         estimatedWaitMinutes: 25,
         diagnosticIndicators: indicators,
         reasoning: 'Moderate acute condition suitable for standard outpatient clinical examination.',
-        confidenceScore: 0.91,
         source: 'heuristic_fallback'
       };
     }
@@ -275,7 +274,6 @@ export const SwasthaAPI = {
       estimatedWaitMinutes: 40,
       diagnosticIndicators: ['Stable baseline'],
       reasoning: 'Stable, non-urgent consultation; regular queue assigned.',
-      confidenceScore: 0.94,
       source: 'heuristic_fallback'
     };
   },
@@ -310,7 +308,6 @@ export const SwasthaAPI = {
           estimatedWaitMinutes: res.data.estimated_wait_minutes,
           diagnosticIndicators: res.data.diagnostic_indicators || [],
           reasoning: res.data.reasoning,
-          confidenceScore: res.data.confidence_score,
           source: res.data.source as 'gemini' | 'heuristic_fallback'
         };
       }

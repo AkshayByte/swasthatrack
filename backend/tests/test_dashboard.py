@@ -1,6 +1,8 @@
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
+
 from models.medicine import Medicine
+
 
 def test_medicine_dashboard(client: TestClient, admin_token: str, db_session: Session):
     # Add some medicines
@@ -8,7 +10,7 @@ def test_medicine_dashboard(client: TestClient, admin_token: str, db_session: Se
     med2 = Medicine(name="Med 2", current_stock=20, minimum_stock=10)
     db_session.add_all([med1, med2])
     db_session.commit()
-    
+
     response = client.get(
         "/api/dashboard/medicine",
         headers={"Authorization": f"Bearer {admin_token}"}

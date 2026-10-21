@@ -1,7 +1,8 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
 import os
+
 from dotenv import load_dotenv
+from sqlalchemy import create_engine
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 load_dotenv()
 
@@ -49,14 +50,6 @@ def get_db():
 def create_tables():
     """Create all database tables"""
     # Import all models to ensure they are registered with Base
-    from models.medicine import Medicine
-    from models.patient import Patient
-    from models.diagnosis import Diagnosis
-    from models.prescription import Prescription
-    from models.lab_report import LabReport
-    from models.appointment import Appointment
-    from models.queue import QueueEntry
-    from models.user import User
-    
+
     Base.metadata.create_all(bind=engine)
 

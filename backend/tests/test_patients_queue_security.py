@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+
 def test_patients_unauthenticated_blocked(client: TestClient):
     response = client.get("/api/patients/")
     assert response.status_code == 401

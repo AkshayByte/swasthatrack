@@ -1,10 +1,11 @@
+import os
+import sys
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-import os
-import sys
 
 # Add backend directory to python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -12,11 +13,11 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Set testing flag
 os.environ["TESTING"] = "true"
 
-from main import app
 from database import Base, get_db
-from utils.security import get_password_hash
-from utils.limiter import limiter
+from main import app
 from models.user import User
+from utils.limiter import limiter
+from utils.security import get_password_hash
 
 limiter.enabled = False
 
@@ -50,7 +51,7 @@ def client(db_session):
             yield db_session
         finally:
             pass
-    
+
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as c:
         yield c

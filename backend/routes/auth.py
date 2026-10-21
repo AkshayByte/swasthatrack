@@ -1,27 +1,35 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Request
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
+import os
+import secrets
 from datetime import timedelta
 from typing import Annotated
 
-import os
-import secrets
-from google.oauth2 import id_token
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token
+from sqlalchemy.orm import Session
 
 from database import get_db
 from models.user import User
 from schemas.auth import (
+    AdminUserCreate,
+    GoogleAuthRequest,
+    LoginRequest,
     Token,
     UserCreate,
-    AdminUserCreate,
-    User as UserSchema,
-    LoginRequest,
-    GoogleAuthRequest,
     UserRole,
 )
-from utils.security import verify_password, get_password_hash, create_access_token, decode_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from schemas.auth import (
+    User as UserSchema,
+)
 from utils.limiter import limiter
+from utils.security import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    create_access_token,
+    decode_access_token,
+    get_password_hash,
+    verify_password,
+)
 
 router = APIRouter()
 
@@ -36,11 +44,11 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Session 
     payload = decode_access_token(token)
     if payload is None:
         raise credentials_exception
-    
+
     user_id: int = payload.get("user_id")
     if user_id is None:
         raise credentials_exception
-        
+
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise credentials_exception
@@ -63,7 +71,7 @@ def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
-    
+
     hashed_password = get_password_hash(user.password)
     db_user = User(
         email=user.email,
@@ -169,7 +177,7 @@ def google_login(request: Request, auth_req: GoogleAuthRequest, db: Session = De
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid Google ID token: {str(e)}",
+            detail=f"Invalid Google ID token: {e!s}",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -188,7 +196,7 @@ def google_login(request: Request, auth_req: GoogleAuthRequest, db: Session = De
         )
 
     name = id_info.get("name") or email.split("@")[0]
-    
+
     # Check if this email is designated as a SuperAdmin
     superadmin_raw = os.getenv("SUPERADMIN_EMAILS", "").strip()
     superadmin_emails = [e.strip().lower() for e in superadmin_raw.split(",") if e.strip()]
@@ -256,7 +264,7 @@ def login_for_access_token(request: Request, form_data: Annotated[OAuth2Password
     access_token = create_access_token(
         data={"user_id": user.id, "role": user.role, "sub": user.email}, expires_delta=access_token_expires
     )
-    
+
     return {
         "access_token": access_token,
         "token_type": "bearer",

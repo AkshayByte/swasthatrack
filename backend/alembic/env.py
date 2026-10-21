@@ -4,9 +4,10 @@ import os
 import sys
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config, pool
-from alembic import context
 from dotenv import load_dotenv
+from sqlalchemy import engine_from_config, pool
+
+from alembic import context
 
 # Load .env so DATABASE_URL is available
 load_dotenv()
@@ -16,16 +17,16 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 # Import our Base so autogenerate can see all models
 from database import Base
+from models.appointment import Appointment  # noqa: F401
+from models.diagnosis import Diagnosis  # noqa: F401
+from models.lab_report import LabReport  # noqa: F401
 
 # Force-import all models so they register with Base.metadata
-from models.medicine import Medicine       # noqa: F401
-from models.patient import Patient         # noqa: F401
-from models.diagnosis import Diagnosis     # noqa: F401
+from models.medicine import Medicine  # noqa: F401
+from models.patient import Patient  # noqa: F401
 from models.prescription import Prescription  # noqa: F401
-from models.lab_report import LabReport    # noqa: F401
-from models.appointment import Appointment # noqa: F401
-from models.queue import QueueEntry        # noqa: F401
-from models.user import User               # noqa: F401
+from models.queue import QueueEntry  # noqa: F401
+from models.user import User  # noqa: F401
 
 # Alembic config object
 config = context.config

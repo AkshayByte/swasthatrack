@@ -9,21 +9,21 @@ Usage:
 Idempotent: Skips records that already exist.
 """
 
-import sys
-import os
 import json
+import os
 import secrets as secrets_module
-from datetime import date, datetime, timezone, timedelta
+import sys
+from datetime import date, datetime, timedelta, timezone
 
 # Ensure backend package is importable
 sys.path.insert(0, os.path.dirname(__file__))
 
 from database import SessionLocal, create_tables
-from models.user import User
-from models.patient import Patient
-from models.queue import QueueEntry
 from models.medicine import Medicine
+from models.patient import Patient
 from models.prescription import Prescription
+from models.queue import QueueEntry
+from models.user import User
 from utils.security import get_password_hash
 
 

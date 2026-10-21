@@ -1,7 +1,10 @@
-from enum import Enum
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from datetime import datetime, timezone
+from enum import Enum
+
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
+
 from database import Base
+
 
 class UserRole(str, Enum):
     ADMIN = "admin"
