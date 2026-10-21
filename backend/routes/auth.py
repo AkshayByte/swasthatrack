@@ -44,6 +44,12 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Se
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise credentials_exception
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account is deactivated.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return user
 
 @router.post("/register", response_model=UserSchema)
@@ -113,12 +119,18 @@ async def login(request: Request, login_data: LoginRequest, db: Session = Depend
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is deactivated. Please contact hospital administrator.",
+        )
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"user_id": user.id, "role": user.role, "sub": user.email}, expires_delta=access_token_expires
     )
-    
+
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -135,7 +147,14 @@ async def google_login(request: Request, auth_req: GoogleAuthRequest, db: Sessio
     creates or finds the associated user, and issues a standard SwasthaTrack JWT.
     """
     google_client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
-    
+
+    if not google_client_id:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google OAuth is not configured. GOOGLE_CLIENT_ID is not set.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     try:
         # Verify the Google ID token signature with Google's public certs
         if google_client_id:
@@ -170,12 +189,10 @@ async def google_login(request: Request, auth_req: GoogleAuthRequest, db: Sessio
 
     name = id_info.get("name") or email.split("@")[0]
     
-    # Check if this email is designated as a SuperAdmin (falls back to project owner email)
-    superadmin_raw = os.getenv("SUPERADMIN_EMAILS", "akshayislesnar@gmail.com")
+    # Check if this email is designated as a SuperAdmin
+    superadmin_raw = os.getenv("SUPERADMIN_EMAILS", "").strip()
     superadmin_emails = [e.strip().lower() for e in superadmin_raw.split(",") if e.strip()]
-    if "akshayislesnar@gmail.com" not in superadmin_emails:
-        superadmin_emails.append("akshayislesnar@gmail.com")
-    
+
     # Look up existing user
     user = db.query(User).filter(User.email == email.lower()).first()
     if not user:
@@ -228,7 +245,13 @@ async def login_for_access_token(request: Request, form_data: Annotated[OAuth2Pa
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is deactivated. Please contact hospital administrator.",
+        )
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"user_id": user.id, "role": user.role, "sub": user.email}, expires_delta=access_token_expires

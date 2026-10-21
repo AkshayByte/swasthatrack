@@ -2,14 +2,35 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, Union, Any
 from jose import jwt, JWTError
 import os
+import logging
 from dotenv import load_dotenv
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 # Configuration
 SECRET_KEY = os.getenv("SECRET_KEY", "dev_secret_key_change_in_production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+
+DEV_SECRET_KEY_DEFAULT = "dev_secret_key_change_in_production"
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+
+
+def validate_secret_key():
+    """
+    Ensure SECRET_KEY is set and non-default in production.
+    Raises RuntimeError if ENVIRONMENT=production and SECRET_KEY is missing
+    or equals the development default.
+    """
+    if ENVIRONMENT != "production":
+        return
+
+    if not SECRET_KEY or SECRET_KEY == DEV_SECRET_KEY_DEFAULT:
+        raise RuntimeError(
+            "FATAL: SECRET_KEY is missing or set to the development default in "
+            "production. Set a strong SECRET_KEY environment variable before starting."
+        )
 
 import bcrypt
 

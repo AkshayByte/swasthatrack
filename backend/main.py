@@ -17,6 +17,7 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 IS_PRODUCTION = ENVIRONMENT == "production"
 
 from database import create_tables
+from utils.security import validate_secret_key
 from routes import medicine, dashboard, auth, patients, queue, prescriptions, lab_orders
 
 
@@ -29,6 +30,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan handler — replaces deprecated on_event('startup')."""
     logger.info("Starting up SwasthaTrack API...")
+    validate_secret_key()
     create_tables()
     try:
         from seed import seed
@@ -81,7 +83,7 @@ else:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_origin_regex=r"https:\/\/.*\.vercel\.app",  # Safely permits preview deployments on Vercel
+    allow_origin_regex=r"https:\/\/(swasthatrack|swasthatrack-.*)\.vercel\.app",  # Only this project's Vercel preview URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

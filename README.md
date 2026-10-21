@@ -350,15 +350,7 @@ uvicorn main:app --reload --port 8000
 > [!IMPORTANT]
 > **Production vs. Development Authentication**:  
 > - **Production**: Static passwords are never published or exposed. Administrator privileges are granted via Google OAuth to whitelisted emails (`SUPERADMIN_EMAILS`), and clinical staff accounts are provisioned dynamically via `POST /api/auth/users`.
-> - **Local Development**: Running `python seed.py` populates baseline testing accounts for all 5 consoles. To inspect your local testing passwords, refer to `backend/local_staff_credentials.md` (strictly git-ignored for your local machine).
-
-| Role | Default Email Pattern | Access Scope |
-|---|---|---|
-| **Admin** | `admin@swasthatrack.org` | Full Hospital System Access & Role Provisioning |
-| **Doctor** | `doctor@swasthatrack.org` | Doctor Station & Clinical E-Prescription / Labs |
-| **Pharmacist** | `pharmacy@swasthatrack.org` | Central Pharmacy Dispensary & Drug Inventory |
-| **Lab Technician** | `lab@swasthatrack.org` | Diagnostic Laboratory & Specimen Analysis |
-| **Receptionist** | `reception@swasthatrack.org` | Registration Desk & OPD Queue Triage Intake |
+> - **Local Development**: Running `python seed.py` populates baseline testing accounts for all 5 consoles. Passwords are generated from `SEED_*_PASSWORD` environment variables (e.g. `SEED_ADMIN_PASSWORD`), or if unset, a random password is generated and printed to the console once during seeding.
 
 #### Frontend Only (Astro + React Islands)
 ```bash

@@ -12,6 +12,7 @@ Idempotent: Skips records that already exist.
 import sys
 import os
 import json
+import secrets as secrets_module
 from datetime import date, datetime, timezone, timedelta
 
 # Ensure backend package is importable
@@ -26,34 +27,46 @@ from models.prescription import Prescription
 from utils.security import get_password_hash
 
 
+def resolve_seed_password(role: str) -> str:
+    """
+    Resolve a password for a seed staff account.
+
+    Checks the environment variable SEED_{ROLE}_PASSWORD (e.g. SEED_ADMIN_PASSWORD).
+    If set, uses that value. If unset, generates a random password.
+    """
+    env_key = f"SEED_{role.upper()}_PASSWORD"
+    env_password = os.getenv(env_key)
+    if env_password:
+        return env_password
+    return secrets_module.token_urlsafe(16)
+
+
+STAFF_ACCOUNT_ROLES = ["admin", "doctor", "pharmacist", "lab", "registration"]
+
+
 STAFF_ACCOUNTS = [
     {
         "email": "admin@swasthatrack.org",
-        "password": "Admin@1234",
         "full_name": "Dr. Alok Verma",
         "role": "admin",
     },
     {
         "email": "doctor@swasthatrack.org",
-        "password": "Doctor@1234",
         "full_name": "Dr. Vikram Sethi",
         "role": "doctor",
     },
     {
         "email": "pharmacy@swasthatrack.org",
-        "password": "Pharma@1234",
         "full_name": "Sunil Verma",
         "role": "pharmacist",
     },
     {
         "email": "lab@swasthatrack.org",
-        "password": "Lab@12345",
         "full_name": "Dr. Meenakshi Iyer",
         "role": "lab",
     },
     {
         "email": "reception@swasthatrack.org",
-        "password": "Recep@1234",
         "full_name": "Pooja Deshmukh",
         "role": "registration",
     },
@@ -215,17 +228,22 @@ def seed():
     db = SessionLocal()
     try:
         # 1. Staff Accounts
+        print("\n=== Staff Account Credentials ===")
         for account in STAFF_ACCOUNTS:
             existing = db.query(User).filter(User.email == account["email"]).first()
             if not existing:
+                password = resolve_seed_password(account["role"])
                 user = User(
                     email=account["email"],
-                    hashed_password=get_password_hash(account["password"]),
+                    hashed_password=get_password_hash(password),
                     full_name=account["full_name"],
                     role=account["role"],
                     is_active=True,
                 )
                 db.add(user)
+                print(f"  {account['role']:15s} | {account['email']:35s} | Password: {password}")
+            else:
+                print(f"  {account['role']:15s} | {account['email']:35s} | (already exists, skipped)")
         db.commit()
 
         # 2. Patients
