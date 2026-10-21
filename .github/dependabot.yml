@@ -1,12 +1,12 @@
 version: 2
 updates:
-  # Backend Python dependencies
+  # Backend Python dependencies - monthly to reduce noise
   - package-ecosystem: "pip"
     directory: "/backend"
     schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+      day: "1st"
+    open-pull-requests-limit: 3
     groups:
       dev-dependencies:
         patterns:
@@ -21,19 +21,45 @@ updates:
           - "sqlalchemy"
           - "psycopg*"
           - "httpx"
+    ignore:
+      # Block major version bumps that require code changes
+      - dependency-name: "sqlalchemy"
+        versions: ["2.x"]
+      - dependency-name: "fastapi"
+        versions: ["0.x"]
 
-  # Frontend npm dependencies
+  # Frontend npm dependencies - monthly
   - package-ecosystem: "npm"
     directory: "/frontend-v2"
     schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+      day: "1st"
+    open-pull-requests-limit: 3
+    groups:
+      dependencies:
+        patterns:
+          - "*"
+    ignore:
+      # Block major version bumps that require Astro migrations
+      - dependency-name: "astro"
+        versions: ["4.x", "5.x", "6.x", "7.x"]
+      - dependency-name: "@astrojs/*"
+        versions: ["4.x", "5.x", "6.x", "7.x"]
+      - dependency-name: "next"
+        versions: ["14.x", "15.x"]
 
-  # GitHub Actions
+  # GitHub Actions - monthly
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+      day: "1st"
+    open-pull-requests-limit: 3
+    ignore:
+      # Pin major versions that require workflow file changes
+      - dependency-name: "actions/checkout"
+        versions: ["5.x", "6.x", "7.x"]
+      - dependency-name: "actions/setup-node"
+        versions: ["5.x", "6.x", "7.x"]
+      - dependency-name: "actions/setup-python"
+        versions: ["6.x", "7.x"]

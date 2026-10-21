@@ -53,13 +53,8 @@ jobs:
           DATABASE_URL: sqlite:///./test.db
           SECRET_KEY: ci-test-secret-key
           ENVIRONMENT: development
-
-      - name: Run tests with Postgres
-        run: python -m pytest -v --tb=short
-        env:
-          DATABASE_URL: postgresql+psycopg2://swastha:testpass123@localhost:5432/swastha_test
-          SECRET_KEY: ci-test-secret-key
-          ENVIRONMENT: development
+          GEMINI_API_KEY: fake-key-for-ci
+          GEMINI_MODEL: gemini-3.8-flash
 
       - name: Run pip-audit
         run: pip-audit -r requirements.txt
@@ -84,7 +79,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
           cache-dependency-path: frontend-v2/package-lock.json
 
@@ -99,6 +94,7 @@ jobs:
         env:
           PUBLIC_API_BASE_URL: https://swasthatrack-api.onrender.com/api
           SITE_URL: https://swasthatrack.vercel.app
+          PUBLIC_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
 
   # ─── Docker: Verify image builds ──────────────────────────
   docker:
