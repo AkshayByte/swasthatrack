@@ -112,3 +112,109 @@ def test_unauthorized_user_cannot_access_individual_or_patient_prescriptions(cli
         headers={"Authorization": f"Bearer {token}"}
     )
     assert patient_res.status_code == 403
+
+
+def test_doctor_can_not_dispense_prescription(client: TestClient, doctor_token: str, sample_patient: Patient):
+    """Doctor role must NOT be allowed to change prescription status (only pharmacist + admin)."""
+    create_res = client.post(
+        "/api/prescriptions/",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={"patient_id": sample_patient.id, "medicines": [{"name": "Paracetamol 650mg"}]}
+    )
+    rx_id = create_res.json()["id"]
+
+    response = client.put(
+        f"/api/prescriptions/{rx_id}/status",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={"status": "dispensed"}
+    )
+    assert response.status_code == 403
+
+
+def test_illegal_transition_dispensed_to_cancelled(client: TestClient, pharmacist_token: str, doctor_token: str, sample_patient: Patient):
+    """After dispensing, status must not transition to cancelled."""
+    rx_id = client.post(
+        "/api/prescriptions/",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={"patient_id": sample_patient.id, "medicines": [{"name": "Paracetamol 650mg"}]}
+    ).json()["id"]
+
+    client.put(
+        f"/api/prescriptions/{rx_id}/status",
+        headers={"Authorization": f"Bearer {pharmacist_token}"},
+        json={"status": "dispensed"}
+    )
+
+    response = client.put(
+        f"/api/prescriptions/{rx_id}/status",
+        headers={"Authorization": f"Bearer {pharmacist_token}"},
+        json={"status": "cancelled"}
+    )
+    assert response.status_code in (400, 409)
+
+
+def test_illegal_transition_cancelled_to_dispensed(client: TestClient, pharmacist_token: str, doctor_token: str, sample_patient: Patient):
+    """After cancelling, status must not transition to dispensed."""
+    rx_id = client.post(
+        "/api/prescriptions/",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={"patient_id": sample_patient.id, "medicines": [{"name": "Paracetamol 650mg"}]}
+    ).json()["id"]
+
+    client.put(
+        f"/api/prescriptions/{rx_id}/status",
+        headers={"Authorization": f"Bearer {pharmacist_token}"},
+        json={"status": "cancelled"}
+    )
+
+    response = client.put(
+        f"/api/prescriptions/{rx_id}/status",
+        headers={"Authorization": f"Bearer {pharmacist_token}"},
+        json={"status": "dispensed"}
+    )
+    assert response.status_code in (400, 409)
+
+
+def test_double_dispense_is_idempotent(client: TestClient, pharmacist_token: str, doctor_token: str, sample_patient: Patient):
+    """Dispensing an already-dispensed prescription must not succeed twice."""
+    rx_id = client.post(
+        "/api/prescriptions/",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={"patient_id": sample_patient.id, "medicines": [{"name": "Paracetamol 650mg"}]}
+    ).json()["id"]
+
+    # First dispense should succeed
+    first = client.put(
+        f"/api/prescriptions/{rx_id}/status",
+        headers={"Authorization": f"Bearer {pharmacist_token}"},
+        json={"status": "dispensed"}
+    )
+    assert first.status_code == 200
+    assert first.json()["status"] == "dispensed"
+
+    # Second dispense must fail (idempotent-safe)
+    second = client.put(
+        f"/api/prescriptions/{rx_id}/status",
+        headers={"Authorization": f"Bearer {pharmacist_token}"},
+        json={"status": "dispensed"}
+    )
+    assert second.status_code in (400, 409)
+
+
+def test_prescribed_by_uses_authenticated_user(client: TestClient, doctor_token: str, sample_patient: Patient):
+    """prescribed_by must come from the authenticated user, not client-supplied doctor_name."""
+    response = client.post(
+        "/api/prescriptions/",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={
+            "patient_id": sample_patient.id,
+            "medicines": [{"name": "Aspirin 75mg"}],
+            "doctor_name": "Fake Doctor",
+            "prescribed_by": "Fake Prescriber",
+        }
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["doctor_name"] != "Fake Doctor"
+    assert data["doctor_name"] != "Fake Prescriber"
+    assert data["doctor_name"]  # Must have the real authenticated user's name

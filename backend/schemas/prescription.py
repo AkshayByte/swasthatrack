@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List, Any, Union
+from models.prescription import PrescriptionStatus
 
 
 class MedicineItem(BaseModel):
@@ -19,12 +20,12 @@ class PrescriptionCreateRequest(BaseModel):
     medicines: Union[List[MedicineItem], List[dict], str]
     instructions: Optional[str] = None
     valid_until: Optional[datetime] = None
-    status: str = "pending"
+    status: PrescriptionStatus = PrescriptionStatus.PENDING
     notes: Optional[str] = None
 
 
 class PrescriptionStatusUpdate(BaseModel):
-    status: str
+    status: PrescriptionStatus
 
 
 class PrescriptionResponse(BaseModel):
@@ -34,7 +35,7 @@ class PrescriptionResponse(BaseModel):
     doctor_name: Optional[str] = None
     medicines: List[Any] = []
     instructions: Optional[str] = None
-    status: str
+    status: PrescriptionStatus
     notes: Optional[str] = None
     created_at: datetime
     valid_until: Optional[datetime] = None

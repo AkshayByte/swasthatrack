@@ -5,7 +5,7 @@ import json
 from datetime import datetime, timezone, timedelta
 
 from database import get_db
-from models.prescription import Prescription as PrescriptionModel
+from models.prescription import Prescription as PrescriptionModel, PrescriptionStatus
 from models.patient import Patient as PatientModel
 from models.user import User
 from routes.auth import get_current_user
@@ -85,8 +85,8 @@ def create_prescription(
     if not patient:
         raise HTTPException(status_code=404, detail=f"Patient ID {data.patient_id} not found")
 
-    doctor_name = data.doctor_name or data.prescribed_by or current_user.full_name or "Dr. Physician"
-    
+    doctor_name = current_user.full_name or current_user.email
+
     # Normalize medicines to JSON string for database storage
     if isinstance(data.medicines, str):
         medicines_json = data.medicines
@@ -103,7 +103,7 @@ def create_prescription(
         prescribed_by=doctor_name,
         prescribed_at=datetime.now(timezone.utc),
         valid_until=valid_until,
-        status=data.status or "pending",
+        status=data.status.value if hasattr(data.status, "value") else data.status,
         notes=data.notes,
     )
     db.add(new_rx)
@@ -140,8 +140,10 @@ def update_prescription_status(
     """
     Transition prescription status (e.g., 'dispensed', 'cancelled').
     Authorization guard: Restricted to Pharmacists and Administrators.
+    State machine: only pending → dispensed and pending → cancelled are allowed.
+    Dispensed and cancelled are final states.
     """
-    if current_user.role not in ["admin", "pharmacist", "doctor"]:
+    if current_user.role not in ["admin", "pharmacist"]:
         raise HTTPException(
             status_code=403,
             detail="Access restricted. Only pharmacists or administrators may dispense medications."
@@ -151,8 +153,36 @@ def update_prescription_status(
     if not rx:
         raise HTTPException(status_code=404, detail="Prescription not found")
 
-    rx.status = update.status.lower()
-    rx.updated_at = datetime.now(timezone.utc)
+    new_status = update.status.value if hasattr(update.status, "value") else update.status.lower()
+
+    # State machine validation: only pending → dispensed / pending → cancelled
+    valid_transitions = {"dispensed", "cancelled"}
+    if rx.status != PrescriptionStatus.PENDING.value or new_status not in valid_transitions:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Invalid status transition: '{rx.status}' → '{new_status}'. "
+                   f"Only pending → dispensed and pending → cancelled are allowed."
+        )
+
+    # Idempotent-safe update: only succeeds if the prescription is still pending
+    rows_affected = (
+        db.query(PrescriptionModel)
+        .filter(
+            PrescriptionModel.id == rx_id,
+            PrescriptionModel.status == PrescriptionStatus.PENDING.value,
+        )
+        .update({
+            PrescriptionModel.status: new_status,
+            PrescriptionModel.updated_at: datetime.now(timezone.utc),
+        })
+    )
+    if rows_affected == 0:
+        db.refresh(rx)  # Load current state
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Prescription is already '{rx.status}'. Cannot transition to '{new_status}'."
+        )
+
     db.commit()
     db.refresh(rx)
 

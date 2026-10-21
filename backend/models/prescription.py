@@ -2,6 +2,14 @@ from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, Foreign
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from database import Base
+from enum import Enum
+
+
+class PrescriptionStatus(str, Enum):
+    PENDING = "pending"
+    DISPENSED = "dispensed"
+    CANCELLED = "cancelled"
+
 
 class Prescription(Base):
     __tablename__ = "prescriptions"
@@ -13,7 +21,7 @@ class Prescription(Base):
     prescribed_by = Column(String(100), nullable=False)
     prescribed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     valid_until = Column(DateTime, nullable=False)
-    status = Column(String(20), default="active")
+    status = Column(String(20), default=PrescriptionStatus.PENDING.value)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
