@@ -1,6 +1,7 @@
-from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
-from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
+
 
 class AppointmentBase(BaseModel):
     patient_id: int
@@ -10,7 +11,7 @@ class AppointmentBase(BaseModel):
     duration: int = 30
     status: str = "scheduled"
     reason: str
-    notes: Optional[str] = None
+    notes: str | None = None
     location: str
 
 class AppointmentCreate(AppointmentBase):

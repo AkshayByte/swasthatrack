@@ -1,19 +1,20 @@
-from pydantic import BaseModel, ConfigDict, Field, field_validator
 from datetime import date, datetime
-from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
 
 # Base Schema (shared fields)
 class MedicineBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
-    generic_name: Optional[str] = None
-    description: Optional[str] = None
-    manufacturer: Optional[str] = None
+    generic_name: str | None = None
+    description: str | None = None
+    manufacturer: str | None = None
     current_stock: int = Field(0, ge=0)
     minimum_stock: int = Field(0, ge=0)
     maximum_stock: int = Field(1000, ge=0)
     unit_price: float = Field(0.0, ge=0.0)
-    expiry_date: Optional[date] = None
-    category: Optional[str] = None
+    expiry_date: date | None = None
+    category: str | None = None
     is_active: bool = True
 
     @field_validator('maximum_stock')
@@ -30,7 +31,7 @@ class MedicineCreate(MedicineBase):
 # For reading a medicine (with ID)
 class Medicine(MedicineBase):
     id: int
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)

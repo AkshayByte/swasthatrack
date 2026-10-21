@@ -1,16 +1,17 @@
-from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
-from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, Field
+
 
 class DiagnosisBase(BaseModel):
     patient_id: int
     diagnosis: str = Field(..., min_length=1)
-    symptoms: Optional[str] = None  # JSON string
+    symptoms: str | None = None  # JSON string
     severity: str = Field(..., pattern="^(Low|Medium|High|Critical)$")
-    notes: Optional[str] = None
+    notes: str | None = None
     diagnosed_by: str
     follow_up_required: bool = False
-    follow_up_date: Optional[datetime] = None
+    follow_up_date: datetime | None = None
 
 class DiagnosisCreate(DiagnosisBase):
     pass

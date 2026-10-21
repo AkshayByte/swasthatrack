@@ -1,6 +1,7 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from datetime import datetime
-from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
 from models.user import UserRole
 
 
@@ -13,8 +14,8 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    email: Optional[str] = None
-    role: Optional[str] = None
+    email: str | None = None
+    role: str | None = None
 
 
 class LoginRequest(BaseModel):
@@ -28,7 +29,7 @@ class GoogleAuthRequest(BaseModel):
 
 class UserBase(BaseModel):
     email: EmailStr
-    full_name: Optional[str] = None
+    full_name: str | None = None
     role: str = UserRole.USER.value
     is_active: bool = True
 
@@ -36,14 +37,14 @@ class UserBase(BaseModel):
 class UserCreate(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8)
-    full_name: Optional[str] = None
+    full_name: str | None = None
     # Public signups never accept role input — always defaults safely to "user"
 
 
 class AdminUserCreate(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8)
-    full_name: Optional[str] = None
+    full_name: str | None = None
     role: UserRole = UserRole.USER
     is_active: bool = True
 

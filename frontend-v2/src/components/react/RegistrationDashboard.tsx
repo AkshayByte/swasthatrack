@@ -34,10 +34,7 @@ export default function RegistrationDashboard() {
     try {
       const [, qList] = await Promise.all([SwasthaAPI.getPatients(), SwasthaAPI.getQueue()]);
       const active = (qList || []).filter(q => ACTIVE_QUEUE_STATUSES.includes(q.status));
-      active.sort((a, b) => {
-        const pw: Record<string, number> = { emergency: 4, high: 3, medium: 2, low: 1 };
-        return (pw[b.priority] || 0) - (pw[a.priority] || 0);
-      });
+      active.sort((a, b) => (b.priority_score || 0) - (a.priority_score || 0));
       setQueue(active);
     } catch (err) {
       setError('Failed to load queue data. Please refresh the page.');
@@ -77,6 +74,7 @@ export default function RegistrationDashboard() {
         patient_id: np.id,
         service_type: triage.recommendedDepartment,
         priority: triage.urgency,
+        priority_score: triage.priorityScore,
         notes: `AI Triage: ${triage.reasoning} | BP: ${bp}, Temp: ${temp}°F`,
         estimated_wait_time: triage.estimatedWaitMinutes,
       });
@@ -312,7 +310,7 @@ export default function RegistrationDashboard() {
 
             <div className="space-y-2.5 max-h-[600px] overflow-y-auto pr-1">
               {queue.map(entry => {
-                const isEmergency = entry.priority === 'emergency';
+                const isEmergency = entry.priority === 'emergency' || entry.priority_score >= 90;
                 return (
                   <div key={entry.id} className={isEmergency ? listItemEmergency : listItem}>
                     <div className="flex items-start justify-between gap-2">

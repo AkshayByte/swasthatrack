@@ -1,27 +1,30 @@
-from pydantic import BaseModel, ConfigDict, Field
-from datetime import datetime, timezone, timedelta
-from typing import Optional, List, Any, Union
+from datetime import datetime
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict
+
 from models.prescription import PrescriptionStatus
 
 
 class MedicineItem(BaseModel):
     name: str
-    dosage: Optional[str] = None
-    frequency: Optional[str] = None
-    duration: Optional[str] = None
-    instructions: Optional[str] = None
+    dosage: str | None = None
+    frequency: str | None = None
+    duration: str | None = None
+    instructions: str | None = None
+    quantity: int = 1
 
 
 class PrescriptionCreateRequest(BaseModel):
     patient_id: int
-    patient_name: Optional[str] = None
-    doctor_name: Optional[str] = None
-    prescribed_by: Optional[str] = None
-    medicines: Union[List[MedicineItem], List[dict], str]
-    instructions: Optional[str] = None
-    valid_until: Optional[datetime] = None
+    patient_name: str | None = None
+    doctor_name: str | None = None
+    prescribed_by: str | None = None
+    medicines: list[MedicineItem] | list[dict] | str
+    instructions: str | None = None
+    valid_until: datetime | None = None
     status: PrescriptionStatus = PrescriptionStatus.PENDING
-    notes: Optional[str] = None
+    notes: str | None = None
 
 
 class PrescriptionStatusUpdate(BaseModel):
@@ -31,13 +34,13 @@ class PrescriptionStatusUpdate(BaseModel):
 class PrescriptionResponse(BaseModel):
     id: int
     patient_id: int
-    patient_name: Optional[str] = None
-    doctor_name: Optional[str] = None
-    medicines: List[Any] = []
-    instructions: Optional[str] = None
+    patient_name: str | None = None
+    doctor_name: str | None = None
+    medicines: list[Any] = []
+    instructions: str | None = None
     status: PrescriptionStatus
-    notes: Optional[str] = None
+    notes: str | None = None
     created_at: datetime
-    valid_until: Optional[datetime] = None
+    valid_until: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)

@@ -42,9 +42,7 @@ export default function DoctorDashboard() {
 
       // Filter to active statuses only (waiting, called, in-progress)
       const activeQueue = (qList || []).filter(q => ACTIVE_QUEUE_STATUSES.includes(q.status));
-      // Sort by priority (emergency first)
-      const pw: Record<string, number> = { emergency: 4, high: 3, medium: 2, low: 1 };
-      const sortedQueue = activeQueue.sort((a, b) => (pw[b.priority] || 0) - (pw[a.priority] || 0));
+      const sortedQueue = activeQueue.sort((a, b) => (b.priority_score || 0) - (a.priority_score || 0));
 
       setQueue(sortedQueue);
       setPatients(pList || []);
@@ -199,7 +197,7 @@ export default function DoctorDashboard() {
               ) : (
                 queue.map(item => {
                 const isSelected = selectedQueueItem?.id === item.id;
-                const isEmergency = item.priority === 'emergency';
+                const isEmergency = item.priority === 'emergency' || item.priority_score >= 90;
                 return (
                   <div key={item.id} onClick={() => handleSelectPatient(item)}
                     className={isSelected ? listItemSelected : isEmergency ? listItemEmergency : listItem}>

@@ -1,39 +1,39 @@
-from pydantic import BaseModel, ConfigDict
 from datetime import datetime
-from typing import Optional, Any
+
+from pydantic import BaseModel, ConfigDict
 
 
 class LabOrderCreateRequest(BaseModel):
     patient_id: int
-    patient_name: Optional[str] = None
-    doctor_name: Optional[str] = None
-    ordered_by: Optional[str] = None
+    patient_name: str | None = None
+    doctor_name: str | None = None
+    ordered_by: str | None = None
     test_name: str
-    category: Optional[str] = "General"
-    test_type: Optional[str] = None
-    priority: Optional[str] = "routine"
-    status: Optional[str] = "pending"
-    notes: Optional[str] = None
+    category: str | None = "General"
+    test_type: str | None = None
+    priority: str | None = "routine"
+    status: str | None = "pending"
+    notes: str | None = None
 
 
 class LabOrderStatusUpdate(BaseModel):
     status: str
-    results: Optional[str] = None
-    notes: Optional[str] = None
+    results: str | None = None
+    notes: str | None = None
 
 
 class LabOrderResponse(BaseModel):
     id: int
     patient_id: int
-    patient_name: Optional[str] = None
-    doctor_name: Optional[str] = None
+    patient_name: str | None = None
+    doctor_name: str | None = None
     test_name: str
     category: str
     priority: str
     status: str
-    results: Optional[str] = None
-    notes: Optional[str] = None
+    results: str | None = None
+    notes: str | None = None
     created_at: datetime
-    ordered_at: Optional[datetime] = None
+    ordered_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)

@@ -21,15 +21,14 @@ Usage:
 
 import argparse
 import os
-import sys
 import secrets
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from database import SessionLocal, DATABASE_URL
+from database import DATABASE_URL, SessionLocal
 from models.user import User
-from utils.security import verify_password, get_password_hash
-
+from utils.security import get_password_hash, verify_password
 
 OLD_PASSWORD_PATTERN = "OAuth_Google_Managed_"
 

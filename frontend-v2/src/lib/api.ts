@@ -57,6 +57,7 @@ export interface QueueEntry {
   doctor_id?: number;
   doctor_name?: string;
   priority: 'low' | 'medium' | 'high' | 'emergency';
+  priority_score: number;
   status: QueueStatus;
   estimated_wait_time: number;
   notes?: string;
