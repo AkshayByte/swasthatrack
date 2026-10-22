@@ -54,7 +54,7 @@ jobs:
           SECRET_KEY: ci-test-secret-key
           ENVIRONMENT: development
           GEMINI_API_KEY: fake-key-for-ci
-          GEMINI_MODEL: gemini-1.5-flash
+          GEMINI_MODEL: gemini-3.8-flash
           GOOGLE_CLIENT_ID: fake-google-client-id-for-ci.apps.googleusercontent.com
           SUPERADMIN_EMAILS: ""
 
