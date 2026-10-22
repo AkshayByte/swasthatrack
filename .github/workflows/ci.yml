@@ -55,6 +55,8 @@ jobs:
           ENVIRONMENT: development
           GEMINI_API_KEY: fake-key-for-ci
           GEMINI_MODEL: gemini-1.5-flash
+          GOOGLE_CLIENT_ID: fake-google-client-id-for-ci.apps.googleusercontent.com
+          SUPERADMIN_EMAILS: ""
 
       - name: Run pip-audit
         run: pip-audit -r requirements.txt
