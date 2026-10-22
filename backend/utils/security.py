@@ -2,8 +2,8 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 
+import jwt
 from dotenv import load_dotenv
-from jose import JWTError, jwt
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -66,5 +66,5 @@ def decode_access_token(token: str) -> dict:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
-    except JWTError:
+    except jwt.PyJWTError:
         return None
