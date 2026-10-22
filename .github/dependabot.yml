@@ -5,7 +5,6 @@ updates:
     directory: "/backend"
     schedule:
       interval: "monthly"
-      day: "1st"
     open-pull-requests-limit: 3
     groups:
       dev-dependencies:
@@ -33,7 +32,6 @@ updates:
     directory: "/frontend-v2"
     schedule:
       interval: "monthly"
-      day: "1st"
     open-pull-requests-limit: 3
     groups:
       dependencies:
@@ -51,5 +49,4 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
-      day: "1st"
     open-pull-requests-limit: 3
