@@ -304,6 +304,11 @@ export default function RegistrationDashboard() {
                   </div>
                 </div>
               )}
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors"
+              >
                 {submitting ? 'Registering…' : 'Register & Assign Priority Queue Slot'}
                 <ArrowRight className="w-4 h-4" />
               </button>
