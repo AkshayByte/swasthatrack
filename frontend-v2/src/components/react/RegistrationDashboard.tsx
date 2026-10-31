@@ -181,7 +181,7 @@ function RegistrationDashboardContent() {
         service_type: triage.recommendedDepartment,
         priority: effectiveUrgency,
         priority_score: triage.priorityScore,
-        notes: `AI Triage (${triage.source}): ${triage.reasoning}${overrideNote} | ${vitalNotes}`,
+        notes: `${triage.reasoning}${overrideNote} | ${vitalNotes}`,
         estimated_wait_time: triage.estimatedWaitMinutes,
       });
 
@@ -471,7 +471,9 @@ function RegistrationDashboardContent() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-semibold text-sm text-slate-900 dark:text-white">{entry.patient_name}</span>
+                          <span className="font-semibold text-sm text-slate-900 dark:text-white truncate">
+                            {entry.patient?.name || entry.patient_name || 'Unknown Patient'}
+                          </span>
                           <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">{entry.queue_number}</span>
                           <span className={priorityBadge[entry.priority] || priorityBadge.low}>{entry.priority}</span>
                         </div>
@@ -489,7 +491,7 @@ function RegistrationDashboardContent() {
 
                     <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
                       <span className="text-[11px] text-slate-400 font-mono flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> ~{entry.estimated_wait_time || 10}m
+                        <Clock className="w-3 h-3" /> Est. ~{entry.estimated_wait_time ?? 10} min
                       </span>
                       <div className="flex gap-2">
                         {entry.status === 'waiting' && (

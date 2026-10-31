@@ -71,6 +71,7 @@ export type QueueStatus = 'waiting' | 'called' | 'in-progress' | 'completed' | '
 export interface QueueEntry {
   id: number;
   patient_id: number;
+  patient?: Patient;
   patient_name?: string;
   queue_number: string;
   service_type: string;
@@ -79,7 +80,7 @@ export interface QueueEntry {
   priority: 'low' | 'medium' | 'high' | 'emergency';
   priority_score: number;
   status: QueueStatus;
-  estimated_wait_time: number;
+  estimated_wait_time?: number;
   notes?: string;
   check_in_time?: string;
   created_at?: string;

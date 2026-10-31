@@ -219,7 +219,7 @@ function DoctorDashboardContent() {
                   <div key={item.id} onClick={() => handleSelectPatient(item)}
                     className={isSelected ? listItemSelected : isEmergency ? listItemEmergency : listItem}>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-sm text-slate-900 dark:text-white">{item.patient_name}</span>
+                      <span className="font-semibold text-sm text-slate-900 dark:text-white truncate">{item.patient?.name || item.patient_name || 'Unknown Patient'}</span>
                       <span className={priorityBadge[item.priority] || priorityBadge.low}>{item.priority}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-1.5 font-mono">
