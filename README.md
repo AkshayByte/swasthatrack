@@ -50,7 +50,7 @@ graph TD
 
     subgraph "CI/CD Pipeline"
         GitHub["GitHub Repository (main)"] -->|"git push"| GHA["GitHub Actions CI"]
-        GHA -->|"Lint & Pytest (116 Tests)"| TestPass["Automated Test Verification"]
+        GHA -->|"Lint & Pytest (117 Tests)"| TestPass["Automated Test Verification"]
         TestPass -->|"Webhook Auto-Deploy"| Render
         TestPass -->|"Edge Auto-Deploy (12 Pages)"| Vercel
     end
@@ -220,10 +220,10 @@ SwasthaTrack adheres to enterprise-grade clinical data integrity and threat miti
 
 ### Continuous Integration Pipeline
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) triggers on every push and PR to `main`:
-- **Backend CI Job**: Sets up Python 3.12, installs dependencies, runs **ruff lint**, executes the full pytest suite (**116 tests** covering auth, AI triage with mock transport, patient intake, concurrency-safe queues, object-level authorization (IDOR protection), prescriptions, lab orders, and audit logging), and uploads backend coverage.
+- **Backend CI Job**: Sets up Python 3.12, installs dependencies, runs **ruff lint**, executes the full pytest suite on in-memory SQLite (**116 tests**, with the PostgreSQL-only concurrency test skipped), and uploads backend coverage.
+- **Backend PostgreSQL Job**: Runs the same suite against a **PostgreSQL 16** service container (**117 tests**, including a threaded stock-deduction concurrency test), so dialect-specific behaviour is covered in CI.
 - **Frontend CI Job**: Sets up Node.js 22, runs `astro check`, and builds the Astro static output (12 pages).
 - **Security Scanning**: `pip-audit` scans for known vulnerabilities in Python dependencies.
-- **Test database**: CI currently runs against in-memory SQLite; PostgreSQL-specific integration tests are on the roadmap.
 
 ### Dependency Updates
 GitHub Dependabot is configured in [`.github/dependabot.yml`](.github/dependabot.yml) to automatically scan and update:
@@ -377,8 +377,14 @@ npm run dev
 
 ### 🧪 Running Test Suites
 ```bash
-# Run backend pytest suite (116 tests across all subsystems)
+# Run backend pytest suite (116 tests on SQLite; the PostgreSQL-only
+# concurrency test is skipped unless TEST_DATABASE_URL is set)
 cd backend
+python -m pytest
+
+# Run the same suite against PostgreSQL (creates/drops tables per test)
+# PowerShell: $env:TEST_DATABASE_URL="postgresql://user:pass@localhost:5432/swastha_test"
+# bash: export TEST_DATABASE_URL=postgresql://user:pass@localhost:5432/swastha_test
 python -m pytest
 
 # Run ruff linting
@@ -396,14 +402,13 @@ npm run build
 ### Current limitations
 - Dashboard data refreshes by polling every 10–15 seconds while the tab is visible. There is no websocket or server-sent-event channel.
 - Most request handlers use synchronous SQLAlchemy sessions inside FastAPI routes, and a few auth routes perform blocking bcrypt work.
-- The automated backend suite runs against in-memory SQLite. PostgreSQL-specific behavior is not covered in CI.
+- The PostgreSQL CI job creates and drops the schema per test. It does not run Alembic migrations against a pre-existing production-like schema.
 - Prescription medicines are stored as JSON, with optional linked medicine rows. Dispensing deducts stock only when a medicine name matches a catalogue entry.
 - AI triage is advisory. Clinical thresholds still carry `# TODO(clinician-review)` markers and need clinician sign-off.
 - The UI covers OPD registration, doctor consultation, pharmacy, lab, and administration. Appointment scheduling, billing, and bed management screens are not implemented.
 - Google sign-in requires a configured `GOOGLE_CLIENT_ID`; without it, only the local username/password flow is available.
 
 ### Roadmap
-- Add a PostgreSQL-backed test job in CI alongside the SQLite suite.
 - Move blocking database and bcrypt work off the event loop, or migrate to async SQLAlchemy.
 - Replace dashboard polling with websockets or server-sent events.
 - Add batch-level inventory tracking and explicit medicine-link management.

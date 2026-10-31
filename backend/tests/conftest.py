@@ -21,16 +21,35 @@ from utils.security import get_password_hash
 
 limiter.enabled = False
 
-# Use in-memory SQLite database for tests
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+# Default to in-memory SQLite. CI also runs this suite against PostgreSQL by
+# setting TEST_DATABASE_URL to a PostgreSQL connection string.
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "").strip()
+USING_POSTGRES = TEST_DATABASE_URL.startswith(("postgres://", "postgresql://"))
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
+if USING_POSTGRES:
+    if TEST_DATABASE_URL.startswith("postgres://"):
+        TEST_DATABASE_URL = TEST_DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif "+psycopg" not in TEST_DATABASE_URL:
+        TEST_DATABASE_URL = TEST_DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+    engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
+else:
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
 
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+@pytest.fixture(scope="session")
+def db_engine():
+    """Expose the test engine for tests that need their own sessions/threads."""
+    return engine
+
+@pytest.fixture(scope="session")
+def db_session_factory():
+    """Expose the test session factory for threaded concurrency tests."""
+    return TestingSessionLocal
 
 @pytest.fixture(scope="function")
 def db_session():
