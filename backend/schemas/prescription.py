@@ -23,7 +23,6 @@ class PrescriptionCreateRequest(BaseModel):
     medicines: list[MedicineItem] | list[dict] | str
     instructions: str | None = None
     valid_until: datetime | None = None
-    status: PrescriptionStatus = PrescriptionStatus.PENDING
     notes: str | None = None
 
 

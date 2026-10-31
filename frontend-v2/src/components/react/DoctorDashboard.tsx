@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { SwasthaAPI, type Patient, type QueueEntry, type QueueStatus } from '../../lib/api';
-import { Stethoscope, Pill, FlaskConical, AlertCircle, CheckCircle2, HeartPulse, FileText, Send, Sparkles, Activity, Thermometer, Droplet, Clock } from 'lucide-react';
+import { Stethoscope, Pill, FlaskConical, AlertCircle, CheckCircle2, HeartPulse, FileText, Send, Activity, Clock } from 'lucide-react';
 import {
-  priorityBadge, statusBadge,
-  btnPrimary, btnSuccess, btnDanger, btnGhost,
-  inputClass, selectClass, textareaClass,
+  priorityBadge,
+  btnPrimary, btnSuccess,
+  inputClass,
   card, cardHeader, label, pageHeader, statPill, toast as toastCls, alertDanger,
   listItem, listItemSelected, listItemEmergency,
 } from '../../lib/ui';
@@ -17,21 +17,17 @@ export default function DoctorDashboard() {
   const [selectedQueueItem, setSelectedQueueItem] = useState<QueueEntry | null>(null);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
-  const [diagnosis, setDiagnosis] = useState('Acute Exertional Angina / Hypertensive Urgency');
-  const [clinicalNotes, setClinicalNotes] = useState('Patient exhibits mild diaphoresis. Advised bed rest, immediate sublingual nitroglycerin and urgent Cardiac Biomarkers workup.');
+  const [diagnosis, setDiagnosis] = useState('');
 
-  const [medName, setMedName] = useState('Atorvastatin 20mg');
-  const [dosage, setDosage] = useState('20mg');
-  const [freq, setFreq] = useState('0-0-1 (Bedtime)');
-  const [duration, setDuration] = useState('30 days');
-  const [prescribedMeds, setPrescribedMeds] = useState<{ name: string; dosage: string; frequency: string; duration: string; instructions: string }[]>([
-    { name: 'Aspirin 75mg', dosage: '75mg', frequency: '0-1-0 (After Lunch)', duration: '30 days', instructions: 'Post meal' },
-    { name: 'Metoprolol 25mg', dosage: '25mg', frequency: '1-0-0 (Morning)', duration: '15 days', instructions: 'With water' },
-  ]);
+  const [medName, setMedName] = useState('');
+  const [dosage, setDosage] = useState('');
+  const [freq, setFreq] = useState('');
+  const [duration, setDuration] = useState('');
+  const [prescribedMeds, setPrescribedMeds] = useState<{ name: string; dosage: string; frequency: string; duration: string; instructions: string }[]>([]);
 
-  const [labTestName, setLabTestName] = useState('Cardiac Biomarkers (Troponin I & CK-MB)');
-  const [labCategory, setLabCategory] = useState('Biochemistry');
-  const [labPriority, setLabPriority] = useState<'routine' | 'urgent' | 'stat'>('stat');
+  const [labTestName, setLabTestName] = useState('');
+  const [labCategory, setLabCategory] = useState('Hematology');
+  const [labPriority, setLabPriority] = useState<'routine' | 'urgent' | 'stat'>('routine');
 
   const [notification, setNotification] = useState('');
   const [error, setError] = useState('');
@@ -46,13 +42,13 @@ export default function DoctorDashboard() {
 
       setQueue(sortedQueue);
       setPatients(pList || []);
-      // Auto-select first patient if not already selected
-      if (sortedQueue.length > 0 && !selectedQueueItem) {
-        setSelectedQueueItem(sortedQueue[0]);
-      }
-      if ((pList || []).length > 0 && !selectedPatient) {
-        setSelectedPatient(pList[0]);
-      }
+      // Auto-select the first queued patient (not an arbitrary patient record)
+      setSelectedQueueItem(prev => {
+        const current = prev ? sortedQueue.find(q => q.id === prev.id) : null;
+        const next = current || sortedQueue[0] || null;
+        setSelectedPatient(next ? (pList || []).find(p => p.id === next.patient_id) || null : null);
+        return next;
+      });
       setError('');
     } catch (err: any) {
       setError('Failed to load queue data. Please refresh the page.');
@@ -91,50 +87,70 @@ export default function DoctorDashboard() {
   };
 
   const handleAddMed = () => {
-    if (!medName) return;
-    setPrescribedMeds([...prescribedMeds, { name: medName, dosage, frequency: freq, duration, instructions: 'As directed' }]);
-    setMedName('');
+    if (!medName.trim()) return;
+    setPrescribedMeds([...prescribedMeds, {
+      name: medName.trim(),
+      dosage: dosage.trim() || 'As directed',
+      frequency: freq.trim() || 'As directed',
+      duration: duration.trim() || 'As directed',
+      instructions: 'As directed',
+    }]);
+    setMedName(''); setDosage(''); setFreq(''); setDuration('');
   };
 
   const handleRemoveMed = (idx: number) => setPrescribedMeds(prescribedMeds.filter((_, i) => i !== idx));
 
   const handleSendPrescription = async () => {
     if (!selectedPatient || prescribedMeds.length === 0) return;
+    setError('');
     try {
       await SwasthaAPI.createPrescription({
         patient_id: selectedPatient.id,
         patient_name: selectedPatient.name,
-        doctor_name: 'Dr. Vikram Sethi, MD',
         medicines: prescribedMeds,
-        notes: diagnosis,
+        notes: diagnosis || undefined,
       });
-
-      if (selectedQueueItem) {
-        await SwasthaAPI.updateQueueStatus(selectedQueueItem.id, 'completed');
-        // Remove completed patient from doctor's active waiting queue
-        setQueue((prev) => {
-          const remaining = prev.filter((q) => q.id !== selectedQueueItem.id);
-          if (remaining.length > 0) {
-            setSelectedQueueItem(remaining[0]);
-            setSelectedPatient(patients.find((p) => p.id === remaining[0].patient_id) || patients[0]);
-          }
-          return remaining;
-        });
-      }
-    } catch (err) {
-      console.error('Error completing consultation:', err);
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || err?.message || 'Failed to send prescription.');
+      return;
     }
-    setNotification(`Prescription for ${selectedPatient.name} sent to Central Pharmacy & consultation completed.`);
-    setTimeout(() => setNotification(''), 5000);
+
+    let queueError = '';
+    if (selectedQueueItem) {
+      try {
+        await SwasthaAPI.updateQueueStatus(selectedQueueItem.id, 'completed');
+      } catch (err: any) {
+        queueError = err?.response?.data?.detail || err?.message || 'Queue status update failed.';
+      }
+    }
+
+    setPrescribedMeds([]);
+    await loadData();
+
+    if (queueError) {
+      setError(`Prescription was sent, but the consultation could not be closed: ${queueError}`);
+    } else {
+      setNotification(`Prescription for ${selectedPatient.name} sent to the pharmacy. Consultation completed.`);
+      setTimeout(() => setNotification(''), 5000);
+    }
   };
 
   const handleSendLabOrder = async () => {
-    if (!selectedPatient || !labTestName) return;
+    if (!selectedPatient || !labTestName.trim()) return;
+    setError('');
     try {
-      await SwasthaAPI.createLabOrder({ patient_id: selectedPatient.id, patient_name: selectedPatient.name, doctor_name: 'Dr. Vikram Sethi, MD', test_name: labTestName, category: labCategory, priority: labPriority });
-    } catch {}
-    setNotification(`Lab order "${labTestName}" dispatched to Pathology Lab.`);
-    setTimeout(() => setNotification(''), 5000);
+      await SwasthaAPI.createLabOrder({
+        patient_id: selectedPatient.id,
+        patient_name: selectedPatient.name,
+        test_name: labTestName.trim(),
+        category: labCategory,
+        priority: labPriority,
+      });
+      setNotification(`Lab order "${labTestName.trim()}" sent to the pathology lab.`);
+      setTimeout(() => setNotification(''), 5000);
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || err?.message || 'Failed to create lab order.');
+    }
   };
 
   return (
@@ -251,20 +267,26 @@ export default function DoctorDashboard() {
                 )}
               </div>
 
-              {/* Vitals ribbon */}
+              {/* Triage context (no invented vitals) */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs">
-                {[
-                  { icon: <Activity className="w-3.5 h-3.5 text-sky-500" />, label: 'Blood Pressure', value: '138/88 mmHg' },
-                  { icon: <HeartPulse className="w-3.5 h-3.5 text-rose-500" />, label: 'Pulse', value: '82 bpm' },
-                  { icon: <Droplet className="w-3.5 h-3.5 text-blue-500" />, label: 'SpO2', value: '98%' },
-                  { icon: <Thermometer className="w-3.5 h-3.5 text-amber-500" />, label: 'Temperature', value: '98.6 °F' },
+                {selectedQueueItem && [
+                  { icon: <Activity className="w-3.5 h-3.5 text-rose-500" />, label: 'Priority', value: `${selectedQueueItem.priority} (${selectedQueueItem.priority_score})` },
+                  { icon: <HeartPulse className="w-3.5 h-3.5 text-sky-500" />, label: 'Queue status', value: selectedQueueItem.status.replace('-', ' ') },
+                  { icon: <Clock className="w-3.5 h-3.5 text-amber-500" />, label: 'Estimated wait', value: `${selectedQueueItem.estimated_wait_time ?? 0} min` },
+                  { icon: <FileText className="w-3.5 h-3.5 text-purple-500" />, label: 'Service', value: selectedQueueItem.service_type },
                 ].map(v => (
                   <div key={v.label}>
                     <div className="flex items-center gap-1 text-[10px] text-slate-400 font-semibold uppercase tracking-wider mb-1">{v.icon}{v.label}</div>
-                    <div className="font-semibold text-slate-900 dark:text-white">{v.value}</div>
+                    <div className="font-semibold text-slate-900 dark:text-white capitalize">{v.value}</div>
                   </div>
                 ))}
               </div>
+
+              {selectedQueueItem?.notes && (
+                <div className="text-xs text-slate-500 dark:text-slate-400 italic px-1">
+                  Triage notes: {selectedQueueItem.notes}
+                </div>
+              )}
 
               {/* Diagnosis */}
               <div>
@@ -289,6 +311,14 @@ export default function DoctorDashboard() {
                       className="flex-1 px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500" />
                     <button type="button" onClick={handleAddMed} className={btnPrimary}>Add</button>
                   </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <input type="text" value={dosage} onChange={e => setDosage(e.target.value)} placeholder="Dosage"
+                      className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500" />
+                    <input type="text" value={freq} onChange={e => setFreq(e.target.value)} placeholder="Frequency"
+                      className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500" />
+                    <input type="text" value={duration} onChange={e => setDuration(e.target.value)} placeholder="Duration"
+                      className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500" />
+                  </div>
 
                   <div className="space-y-1.5 max-h-32 overflow-y-auto">
                     {prescribedMeds.map((med, idx) => (
@@ -302,7 +332,8 @@ export default function DoctorDashboard() {
                     ))}
                   </div>
 
-                  <button type="button" onClick={handleSendPrescription} className={`${btnSuccess} w-full justify-center`}>
+                  <button type="button" onClick={handleSendPrescription} disabled={prescribedMeds.length === 0}
+                    className={`${btnSuccess} w-full justify-center disabled:opacity-60 disabled:cursor-not-allowed`}>
                     <Send className="w-3.5 h-3.5" /> Send to Pharmacy
                   </button>
                 </div>
@@ -331,7 +362,8 @@ export default function DoctorDashboard() {
                     </select>
                   </div>
 
-                  <button type="button" onClick={handleSendLabOrder} className={`${btnPrimary} w-full justify-center`}>
+                  <button type="button" onClick={handleSendLabOrder} disabled={!labTestName.trim()}
+                    className={`${btnPrimary} w-full justify-center disabled:opacity-60 disabled:cursor-not-allowed`}>
                     <Send className="w-3.5 h-3.5" /> Order Lab Work
                   </button>
                 </div>

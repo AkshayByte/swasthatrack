@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { SwasthaAPI, type Patient, type QueueEntry, type QueueStatus } from '../../lib/api';
+import { useState, useEffect } from 'react';
+import { SwasthaAPI, type QueueEntry, type QueueStatus, type TriageResult, type TriageUrgency } from '../../lib/api';
 import { UserPlus, Sparkles, Clock, AlertTriangle, CheckCircle2, ArrowRight, Zap } from 'lucide-react';
 import {
   priorityBadge, statusBadge,
-  btnPrimary, btnSuccess, btnCta,
+  btnPrimary, btnSuccess,
   inputClass, inputMono, selectClass, textareaClass,
   card, cardHeader, label, pageHeader, statPill, toast as toastCls,
-  listItem, listItemSelected, listItemEmergency, alertDanger,
+  listItem, listItemEmergency, alertDanger,
 } from '../../lib/ui';
 
 const ACTIVE_QUEUE_STATUSES: QueueStatus[] = ['waiting', 'called', 'in-progress'];
@@ -24,16 +24,21 @@ export default function RegistrationDashboard() {
   const [bloodGroup, setBloodGroup] = useState('B+');
   const [temp, setTemp] = useState('98.6');
   const [bp, setBp] = useState('120/80');
+  const [spo2, setSpo2] = useState('');
+  const [hr, setHr] = useState('');
 
-  const [aiTriage, setAiTriage] = useState<any>(null);
+  const [aiTriage, setAiTriage] = useState<TriageResult | null>(null);
+  const [overrideUrgency, setOverrideUrgency] = useState<TriageUrgency | ''>('');
+  const [triageLoading, setTriageLoading] = useState(false);
+  const [triageError, setTriageError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [, qList] = await Promise.all([SwasthaAPI.getPatients(), SwasthaAPI.getQueue()]);
-      const active = (qList || []).filter(q => ACTIVE_QUEUE_STATUSES.includes(q.status));
+      const qList = await SwasthaAPI.getQueue();
+      const active = qList.filter(q => ACTIVE_QUEUE_STATUSES.includes(q.status));
       active.sort((a, b) => (b.priority_score || 0) - (a.priority_score || 0));
       setQueue(active);
     } catch (err) {
@@ -68,14 +73,48 @@ export default function RegistrationDashboard() {
   }, []);
 
   useEffect(() => {
-    if (symptoms.trim().length > 3) {
-      setAiTriage(SwasthaAPI.calculateAITriage(symptoms, { temp, bp }));
-    } else {
+    if (symptoms.trim().length <= 3) {
       setAiTriage(null);
+      setOverrideUrgency('');
+      setTriageError('');
+      setTriageLoading(false);
+      return;
     }
-  }, [symptoms, temp, bp]);
 
-  const applyPreset = (s: string, b: string, t: string) => { setSymptoms(s); setBp(b); setTemp(t); };
+    let cancelled = false;
+    setTriageLoading(true);
+    setTriageError('');
+
+    const timeout = setTimeout(async () => {
+      try {
+        const triage = await SwasthaAPI.calculateAITriage(
+          symptoms,
+          { temp, bp, spo2, hr },
+          { age: Number(age) || undefined, gender }
+        );
+        if (!cancelled) setAiTriage(triage);
+      } catch (err: any) {
+        if (!cancelled) {
+          setAiTriage(null);
+          setTriageError(err?.response?.data?.detail || err?.message || 'Triage service unavailable.');
+        }
+      } finally {
+        if (!cancelled) setTriageLoading(false);
+      }
+    }, 600);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [symptoms, temp, bp, spo2, hr, age, gender]);
+
+  const applyPreset = (s: string, b: string, t: string) => {
+    setSymptoms(s);
+    setBp(b);
+    setTemp(t);
+    setOverrideUrgency('');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,27 +122,42 @@ export default function RegistrationDashboard() {
     setSubmitting(true);
     setError('');
     try {
-      const triage = SwasthaAPI.calculateAITriage(symptoms || 'General Checkup', { temp, bp });
+      const triage = await SwasthaAPI.calculateAITriage(
+        symptoms || 'General Checkup',
+        { temp, bp, spo2, hr },
+        { age: Number(age) || undefined, gender }
+      );
 
       // Step 1: Create patient
       const np = await SwasthaAPI.createPatient({
         name, age: Number(age) || 30, gender, phone, blood_group: bloodGroup
       });
 
-      // Step 2: Add to queue — use the entry returned by the backend
-      const newEntry = await SwasthaAPI.addToQueue({
+      // Step 2: Add to queue using the server triage result, unless a
+      // clinician has explicitly overridden the urgency.
+      const effectiveUrgency = overrideUrgency || triage.urgency;
+      const overrideNote = overrideUrgency && overrideUrgency !== triage.urgency
+        ? ` | Clinician override: ${overrideUrgency} (AI: ${triage.urgency})`
+        : '';
+      const vitalNotes = [
+        bp && `BP: ${bp}`,
+        temp && `Temp: ${temp}°F`,
+        spo2 && `SpO2: ${spo2}%`,
+        hr && `HR: ${hr} bpm`,
+      ].filter(Boolean).join(', ');
+
+      await SwasthaAPI.addToQueue({
         patient_id: np.id,
         service_type: triage.recommendedDepartment,
-        priority: triage.urgency,
+        priority: effectiveUrgency,
         priority_score: triage.priorityScore,
-        notes: `AI Triage: ${triage.reasoning} | BP: ${bp}, Temp: ${temp}°F`,
+        notes: `AI Triage (${triage.source}): ${triage.reasoning}${overrideNote} | ${vitalNotes}`,
         estimated_wait_time: triage.estimatedWaitMinutes,
       });
 
-      // Prepend the newly added entry to the local queue
-      setQueue(prev => [newEntry, ...prev]);
-      setSuccessMessage(`${name} registered — ${triage.urgency.toUpperCase()} priority, routed to ${triage.recommendedDepartment}`);
-      setName(''); setAge(''); setPhone(''); setSymptoms(''); setAiTriage(null);
+      await loadData();
+      setSuccessMessage(`${name} registered — ${effectiveUrgency.toUpperCase()} priority, routed to ${triage.recommendedDepartment}`);
+      setName(''); setAge(''); setPhone(''); setSymptoms(''); setAiTriage(null); setOverrideUrgency('');
     } catch (err: any) {
       setError(err?.response?.data?.detail || err?.message || 'Registration failed. Please try again.');
     } finally {
@@ -262,6 +316,14 @@ export default function RegistrationDashboard() {
                   <label className={label}>Blood Pressure</label>
                   <input type="text" value={bp} onChange={e => setBp(e.target.value)} placeholder="120/80" className={inputMono} />
                 </div>
+                <div>
+                  <label className={label}>SpO₂ (%)</label>
+                  <input type="text" value={spo2} onChange={e => setSpo2(e.target.value)} placeholder="98" className={inputMono} />
+                </div>
+                <div>
+                  <label className={label}>Heart Rate (bpm)</label>
+                  <input type="text" value={hr} onChange={e => setHr(e.target.value)} placeholder="72" className={inputMono} />
+                </div>
               </div>
 
               <div>
@@ -275,6 +337,17 @@ export default function RegistrationDashboard() {
               </div>
 
               {/* Live AI assessment box */}
+              {triageLoading && (
+                <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-xs text-slate-500 dark:text-slate-400">
+                  Calculating triage from the server…
+                </div>
+              )}
+              {triageError && (
+                <div className={alertDanger}>
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span className="flex-1">{triageError}</span>
+                </div>
+              )}
               {aiTriage && (
                 <div className={`p-4 rounded-xl border transition-all ${triageCardColor}`}>
                   <div className={`flex items-center justify-between mb-2 ${triageTextColor}`}>
@@ -288,6 +361,9 @@ export default function RegistrationDashboard() {
                        <span className="px-2 py-0.5 rounded-md bg-white/60 dark:bg-black/20 text-[11px] font-mono border border-current/20">
                          Score {aiTriage.priorityScore}/100
                        </span>
+                       <span className="px-2 py-0.5 rounded-md bg-white/60 dark:bg-black/20 text-[10px] font-semibold border border-current/20">
+                         {aiTriage.source === 'gemini' ? 'Gemini' : 'Rule fallback'}
+                       </span>
                      </div>
                   </div>
                   <p className={`text-xs leading-relaxed ${triageTextColor} opacity-90`}>{aiTriage.reasoning}</p>
@@ -298,9 +374,30 @@ export default function RegistrationDashboard() {
                       ))}
                     </div>
                   )}
-                  <div className={`mt-2.5 pt-2 border-t border-current/20 flex items-center justify-between text-xs font-semibold ${triageTextColor}`}>
-                    <span>→ {aiTriage.recommendedDepartment}</span>
-                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> ~{aiTriage.estimatedWaitMinutes}m wait</span>
+                  <div className={`mt-2.5 pt-2 border-t border-current/20 flex items-center justify-between gap-2 text-xs font-semibold ${triageTextColor}`}>
+                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> ~{aiTriage.estimatedWaitMinutes}m AI wait estimate</span>
+                    <label className="flex items-center gap-1.5">
+                      <span className="text-[10px] uppercase tracking-wider opacity-80">Clinician override</span>
+                      <select
+                        value={overrideUrgency}
+                        onChange={e => setOverrideUrgency(e.target.value as TriageUrgency | '')}
+                        className="px-1.5 py-1 rounded-md bg-white/70 dark:bg-black/30 border border-current/20 text-[11px] font-semibold"
+                      >
+                        <option value="">Use AI result</option>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="emergency">Emergency</option>
+                      </select>
+                    </label>
+                  </div>
+                  {overrideUrgency && (
+                    <p className={`mt-1.5 text-[11px] ${triageTextColor} opacity-90`}>
+                      Override recorded in the queue notes. AI suggested {aiTriage.urgency}.
+                    </p>
+                  )}
+                  <div className={`mt-1.5 text-xs font-semibold ${triageTextColor}`}>
+                    → {aiTriage.recommendedDepartment}
                   </div>
                 </div>
               )}
@@ -335,7 +432,9 @@ export default function RegistrationDashboard() {
             </div>
 
             <div className="space-y-2.5 max-h-[600px] overflow-y-auto pr-1">
-              {queue.map(entry => {
+              {loading && queue.length === 0 ? (
+                <div className="py-10 text-center text-xs text-slate-400">Loading queue…</div>
+              ) : queue.map(entry => {
                 const isEmergency = entry.priority === 'emergency' || entry.priority_score >= 90;
                 return (
                   <div key={entry.id} className={isEmergency ? listItemEmergency : listItem}>
@@ -347,7 +446,7 @@ export default function RegistrationDashboard() {
                           <span className={priorityBadge[entry.priority] || priorityBadge.low}>{entry.priority}</span>
                         </div>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate">
-                          {entry.service_type} · {entry.doctor_name || 'Dr. Vikram Sethi'}
+                          {entry.service_type} · {entry.doctor_name || 'Unassigned'}
                         </p>
                         {entry.notes && (
                           <p className="text-[11px] text-slate-500 dark:text-slate-500 mt-1.5 italic line-clamp-2">{entry.notes}</p>

@@ -13,26 +13,12 @@ jobs:
     defaults:
       run:
         working-directory: ./backend
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: swastha
-          POSTGRES_PASSWORD: testpass123
-          POSTGRES_DB: swastha_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U swastha"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -62,11 +48,11 @@ jobs:
         run: pip-audit -r requirements.txt
 
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-report
-          path: coverage.xml
+          path: backend/coverage.xml
 
   # ─── Frontend: Type-check + Build ─────────────────────────
   frontend:
@@ -76,10 +62,10 @@ jobs:
         working-directory: ./frontend-v2
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: npm
@@ -104,7 +90,7 @@ jobs:
     needs: [backend]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build Docker image
         run: docker build -t swasthatrack-api ./backend
