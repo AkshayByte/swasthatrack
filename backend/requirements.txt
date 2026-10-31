@@ -18,6 +18,6 @@ requests>=2.31.0
 slowapi>=0.1.10
 
 # Development / CI tools
-ruff>=0.17.1
+ruff>=0.17.2
 pip-audit>=2.10.1
 pytest-cov>=7.1.0

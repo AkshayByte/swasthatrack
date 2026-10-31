@@ -46,6 +46,23 @@ def test_queue_entry_accepts_priority_score(client: TestClient, admin_token: str
     assert data["priority_score"] == 82
 
 
+def test_queue_priority_score_is_clamped_to_urgency_band(client: TestClient, admin_token: str, sample_patient: Patient):
+    """A clinician override must not leave a score outside its urgency band."""
+    res = client.post(
+        "/api/queue/",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "patient_id": sample_patient.id,
+            "service_type": "General OPD",
+            "priority": "emergency",
+            "priority_score": 10,
+            "queue_number": "",
+        },
+    )
+    assert res.status_code == 201
+    assert res.json()["priority_score"] >= 90
+
+
 def test_queue_entry_defaults_priority_score(client: TestClient, admin_token: str, sample_patient: Patient):
     """priority_score should default to 25 when not provided."""
     res = client.post(

@@ -1,61 +1,73 @@
-import React, { useState, useEffect } from 'react';
-import { SwasthaAPI, type Prescription } from '../../lib/api';
+import { useState, useEffect } from 'react';
+import { SwasthaAPI, type Medicine, type Prescription } from '../../lib/api';
 import { Pill, CheckCircle2, Package, Truck, AlertTriangle, Search, ShieldCheck } from 'lucide-react';
 import {
   statusBadge,
   btnSuccess,
-  inputClass,
-  card, cardHeader, label, pageHeader, statPill, toast as toastCls,
+  card, cardHeader, pageHeader, statPill, toast as toastCls, alertDanger,
 } from '../../lib/ui';
 
-interface MedicineStock {
-  id: number; name: string; category: string; stock: number;
-  minThreshold: number; batchNumber: string; expiryDate: string;
-}
-
-const initialInventory: MedicineStock[] = [
-  { id: 1, name: 'Paracetamol 650mg', category: 'Analgesic & Antipyretic', stock: 450, minThreshold: 100, batchNumber: 'BAT-2026-08A', expiryDate: '2027-12' },
-  { id: 2, name: 'Metformin 500mg', category: 'Antidiabetic', stock: 280, minThreshold: 80, batchNumber: 'BAT-2026-04C', expiryDate: '2028-03' },
-  { id: 3, name: 'Atorvastatin 20mg', category: 'Cardiovascular', stock: 65, minThreshold: 75, batchNumber: 'BAT-2025-11B', expiryDate: '2026-11' },
-  { id: 4, name: 'Amoxicillin 500mg', category: 'Antibiotic', stock: 190, minThreshold: 60, batchNumber: 'BAT-2026-02D', expiryDate: '2027-08' },
-  { id: 5, name: 'Aspirin 75mg', category: 'Antiplatelet', stock: 520, minThreshold: 100, batchNumber: 'BAT-2026-09E', expiryDate: '2028-06' },
-];
-
-const fallbackPrescriptions: Prescription[] = [
-  { id: 'RX-8921', patient_id: 101, patient_name: 'Rajesh Sharma', doctor_name: 'Dr. Vikram Sethi, MD', medicines: [{ name: 'Amoxicillin 500mg', dosage: '500mg', frequency: '1-0-1 (After Meals)', duration: '5 days', instructions: 'Take with full glass of water' }, { name: 'Paracetamol 650mg', dosage: '650mg', frequency: 'SOS', duration: '3 days', instructions: 'Post fever >100°F' }], status: 'pending', created_at: new Date(Date.now() - 1000 * 60 * 18).toISOString() },
-  { id: 'RX-8922', patient_id: 102, patient_name: 'Anita Patel', doctor_name: 'Dr. Sunita Rao, MD', medicines: [{ name: 'Metformin 500mg', dosage: '500mg', frequency: '1-0-1 (With Meals)', duration: '30 days', instructions: 'With morning and evening meal' }, { name: 'Atorvastatin 20mg', dosage: '20mg', frequency: '0-0-1 (Bedtime)', duration: '30 days', instructions: 'At night before sleep' }], status: 'pending', created_at: new Date(Date.now() - 1000 * 60 * 42).toISOString() },
-  { id: 'RX-8923', patient_id: 103, patient_name: 'Mohan Lal Verma', doctor_name: 'Dr. Vikram Sethi, MD', medicines: [{ name: 'Aspirin 75mg', dosage: '75mg', frequency: '0-1-0 (After Lunch)', duration: '15 days', instructions: 'Post lunch with water' }], status: 'dispensed', created_at: new Date(Date.now() - 1000 * 60 * 120).toISOString() },
-];
-
 export default function PharmacyDashboard() {
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>(fallbackPrescriptions);
-  const [inventory, setInventory] = useState<MedicineStock[]>(initialInventory);
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [inventory, setInventory] = useState<Medicine[]>([]);
   const [filter, setFilter] = useState<'all' | 'pending' | 'dispensed'>('pending');
   const [search, setSearch] = useState('');
   const [toast, setToast] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  const loadPrescriptions = async () => {
+  const loadData = async () => {
     try {
-      const data = await SwasthaAPI.getPrescriptions();
-      if (data && data.length > 0) setPrescriptions(data);
-    } catch {}
+      const [rxList, medicineList] = await Promise.all([
+        SwasthaAPI.getPrescriptions(),
+        SwasthaAPI.getMedicines(),
+      ]);
+      setPrescriptions(rxList);
+      setInventory(medicineList);
+      setError('');
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || err?.message || 'Failed to load pharmacy data.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { loadPrescriptions(); }, []);
+  useEffect(() => {
+    loadData();
+
+    const interval = setInterval(() => {
+      if (!document.hidden) loadData();
+    }, 10000);
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) loadData();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   const handleDispense = async (rxId: string | number) => {
-    try { await SwasthaAPI.updatePrescriptionStatus(rxId, 'dispensed'); } catch {}
-    setPrescriptions(prev => prev.map(p => p.id === rxId ? { ...p, status: 'dispensed' } : p));
-    setInventory(prev => prev.map(item => item.id === 1 || item.id === 4 ? { ...item, stock: Math.max(0, item.stock - 10) } : item));
-    setToast(`Prescription #${rxId} dispensed. Inventory updated.`);
-    setTimeout(() => setToast(''), 5000);
+    setError('');
+    try {
+      await SwasthaAPI.updatePrescriptionStatus(rxId, 'dispensed');
+      await loadData();
+      setToast(`Prescription #${rxId} dispensed. Inventory refreshed from the server.`);
+      setTimeout(() => setToast(''), 5000);
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || err?.message || `Failed to dispense prescription #${rxId}.`);
+    }
   };
 
   const filteredRx = prescriptions.filter(p => {
+    const term = search.toLowerCase();
     const matchesFilter = filter === 'all' || p.status === filter;
-    const matchesSearch = p.patient_name.toLowerCase().includes(search.toLowerCase()) ||
-      p.doctor_name.toLowerCase().includes(search.toLowerCase()) ||
-      p.medicines.some(m => m.name.toLowerCase().includes(search.toLowerCase()));
+    const matchesSearch = (p.patient_name || '').toLowerCase().includes(term) ||
+      (p.doctor_name || '').toLowerCase().includes(term) ||
+      p.medicines.some(m => (m.name || '').toLowerCase().includes(term));
     return matchesFilter && matchesSearch;
   });
 
@@ -98,6 +110,14 @@ export default function PharmacyDashboard() {
         </div>
       )}
 
+      {error && (
+        <div className={alertDanger}>
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span className="flex-1">{error}</span>
+          <button onClick={() => setError('')} className="text-xs font-semibold text-rose-700 dark:text-rose-300 hover:underline shrink-0">Dismiss</button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
 
         {/* ─── Left: Prescriptions ─── */}
@@ -134,7 +154,9 @@ export default function PharmacyDashboard() {
             </div>
 
             <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
-              {filteredRx.length === 0 ? (
+              {loading ? (
+                <div className="py-12 text-center text-xs text-slate-400">Loading prescriptions…</div>
+              ) : filteredRx.length === 0 ? (
                 <div className="py-12 text-center text-xs text-slate-400">
                   <Pill className="w-8 h-8 text-slate-200 dark:text-slate-700 mx-auto mb-2" />
                   No prescriptions match current filters.
@@ -150,11 +172,11 @@ export default function PharmacyDashboard() {
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm text-slate-900 dark:text-white">{rx.patient_name}</span>
+                          <span className="font-semibold text-sm text-slate-900 dark:text-white">{rx.patient_name || `Patient #${rx.patient_id}`}</span>
                           <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">#{rx.id}</span>
                         </div>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                          Prescribed by <span className="font-medium text-slate-700 dark:text-slate-300">{rx.doctor_name}</span>
+                          Prescribed by <span className="font-medium text-slate-700 dark:text-slate-300">{rx.doctor_name || 'Unassigned'}</span>
                         </p>
                       </div>
                       <span className={statusBadge[rx.status] || statusBadge.pending}>{rx.status}</span>
@@ -165,7 +187,9 @@ export default function PharmacyDashboard() {
                       {rx.medicines.map((m, idx) => (
                         <div key={idx} className="flex items-center justify-between text-xs border-b last:border-0 border-slate-100 dark:border-slate-800 pb-1.5 last:pb-0">
                           <span className="font-medium text-slate-900 dark:text-white">{m.name}</span>
-                          <span className="text-slate-400 font-mono text-[11px]">{m.dosage} · {m.frequency} · {m.duration}</span>
+                          <span className="text-slate-400 font-mono text-[11px]">
+                            {[m.dosage, m.frequency, m.duration].filter(Boolean).join(' · ') || 'As directed'}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -195,13 +219,16 @@ export default function PharmacyDashboard() {
                 <Package className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                 Medicine Stock
               </h2>
-              <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 font-medium">Live inventory</span>
+              <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 font-medium">Server inventory</span>
             </div>
 
             <div className="space-y-3">
-              {inventory.map(item => {
-                const isLow = item.stock <= item.minThreshold;
-                const pct = Math.min(100, (item.stock / 600) * 100);
+              {inventory.length === 0 && !loading ? (
+                <div className="py-8 text-center text-xs text-slate-400">No medicines in the catalogue.</div>
+              ) : inventory.map(item => {
+                const isLow = item.current_stock <= item.minimum_stock;
+                const maxStock = item.maximum_stock || Math.max(item.current_stock, item.minimum_stock, 100);
+                const pct = Math.min(100, (item.current_stock / maxStock) * 100);
                 return (
                   <div key={item.id} className={`p-3.5 rounded-xl border transition-all ${
                     isLow ? 'border-rose-200 dark:border-rose-800/60 bg-rose-50/50 dark:bg-rose-950/20'
@@ -211,12 +238,12 @@ export default function PharmacyDashboard() {
                       <div>
                         <div className="font-semibold text-xs text-slate-900 dark:text-white">{item.name}</div>
                         <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                          {item.batchNumber} · Exp {item.expiryDate}
+                          {[item.category, item.expiry_date && `Exp ${item.expiry_date}`].filter(Boolean).join(' · ') || 'No batch details'}
                         </div>
                       </div>
                       <div className="text-right">
                         <div className={`text-sm font-bold ${isLow ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'}`}>
-                          {item.stock} units
+                          {item.current_stock} units
                         </div>
                         {isLow && (
                           <div className="text-[10px] text-rose-600 dark:text-rose-400 font-semibold flex items-center gap-0.5 justify-end mt-0.5">
@@ -236,7 +263,7 @@ export default function PharmacyDashboard() {
 
             <div className="mt-4 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400 flex items-start gap-2">
               <Truck className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-              All dispensations automatically deduct batch counts and update medical records.
+              Dispensing decrements stock on the server for medicines linked to the prescription.
             </div>
           </div>
         </div>

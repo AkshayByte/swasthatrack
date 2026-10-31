@@ -1,22 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { SwasthaAPI, type QueueEntry, type Prescription, type LabOrder } from '../../lib/api';
-import { UserPlus, Stethoscope, Pill, FlaskConical, Shield, ArrowRight, LayoutGrid } from 'lucide-react';
-import { card, pageHeader } from '../../lib/ui';
+import { UserPlus, Stethoscope, Pill, FlaskConical, Shield, ArrowRight, LayoutGrid, AlertTriangle } from 'lucide-react';
+import { alertDanger, card, pageHeader } from '../../lib/ui';
 
 export default function UnifiedDashboard() {
   const [queue, setQueue] = useState<QueueEntry[]>([]);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [labOrders, setLabOrders] = useState<LabOrder[]>([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     Promise.all([SwasthaAPI.getQueue(), SwasthaAPI.getPrescriptions(), SwasthaAPI.getLabOrders()])
-      .then(([q, p, l]) => { if (q) setQueue(q); if (p) setPrescriptions(p); if (l) setLabOrders(l); })
-      .catch(() => {});
+      .then(([q, p, l]) => { setQueue(q); setPrescriptions(p); setLabOrders(l); })
+      .catch((err: any) => {
+        setError(err?.response?.data?.detail || err?.message || 'Failed to load dashboard counts.');
+      });
   }, []);
 
-  const waitingPatients = queue.filter(q => q.status === 'waiting').length || 3;
-  const pendingRx = prescriptions.filter(p => p.status === 'pending').length || 2;
-  const pendingLab = labOrders.filter(l => l.status !== 'completed').length || 3;
+  const waitingPatients = queue.filter(q => q.status === 'waiting').length;
+  const pendingRx = prescriptions.filter(p => p.status === 'pending').length;
+  const pendingLab = labOrders.filter(l => l.status !== 'completed').length;
 
   const departments = [
     {
@@ -59,7 +62,7 @@ export default function UnifiedDashboard() {
       id: 'admin', name: 'Administration',
       desc: 'Cross-departmental metrics, staff roster, and system health.',
       Icon: Shield, href: '/dashboard/admin',
-      badge: 'All online',
+      badge: 'Open console',
       color: 'text-slate-600 dark:text-slate-400',
       bg: 'bg-slate-100 dark:bg-slate-800',
       ring: 'border-slate-200 dark:border-slate-700',
@@ -81,9 +84,17 @@ export default function UnifiedDashboard() {
         </div>
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">5 consoles ready</span>
+          <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">5 consoles available</span>
         </div>
       </div>
+
+      {error && (
+        <div className={alertDanger}>
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span className="flex-1">{error}</span>
+          <button onClick={() => setError('')} className="text-xs font-semibold text-rose-700 dark:text-rose-300 hover:underline shrink-0">Dismiss</button>
+        </div>
+      )}
 
       {/* Department cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

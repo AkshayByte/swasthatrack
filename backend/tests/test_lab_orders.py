@@ -39,6 +39,23 @@ def test_doctor_can_create_lab_order(client: TestClient, doctor_token: str, samp
     assert data["status"] == "pending"
 
 
+def test_lab_order_status_cannot_be_set_on_create(
+    client: TestClient, doctor_token: str, sample_patient: Patient
+):
+    """A newly ordered lab test must always start as pending."""
+    response = client.post(
+        "/api/lab-orders/",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={
+            "patient_id": sample_patient.id,
+            "test_name": "Serum Electrolytes",
+            "status": "completed",
+        },
+    )
+    assert response.status_code == 201
+    assert response.json()["status"] == "pending"
+
+
 def test_unauthorized_user_cannot_create_lab_order(client: TestClient, token: str, sample_patient: Patient):
     response = client.post(
         "/api/lab-orders/",

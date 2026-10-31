@@ -1,14 +1,14 @@
 # 🏥 SwasthaTrack — Intelligent Healthcare Management & Clinical Workflow Engine
 
 [![CI Pipeline](https://github.com/AkshayByte/swasthatrack/actions/workflows/ci.yml/badge.svg)](https://github.com/AkshayByte/swasthatrack/actions/workflows/ci.yml)
-[![FastAPI](https://img.shields.io/badge/Backend-FastAPI_0.104-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Astro](https://img.shields.io/badge/Frontend-Astro_5.0_%2B_React-FF5D01?logo=astro&logoColor=white)](https://astro.build)
-[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL_16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org)
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI_0.147%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Astro](https://img.shields.io/badge/Frontend-Astro_7.4_%2B_React-FF5D01?logo=astro&logoColor=white)](https://astro.build)
+[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org)
 [![Docker](https://img.shields.io/badge/Container-Docker_Multi--Stage-2496ED?logo=docker&logoColor=white)](https://www.docker.com)
 [![Render](https://img.shields.io/badge/Deploy-Render_Cloud-46E3B7?logo=render&logoColor=white)](https://render.com)
 [![Vercel](https://img.shields.io/badge/Deploy-Vercel_Edge-000000?logo=vercel&logoColor=white)](https://vercel.com)
 
-SwasthaTrack is an enterprise-grade Hospital Management Information System (HMIS) and real-time clinical workflow engine designed to eliminate departmental silos, streamline patient transitions, and automate clinical emergency triage using artificial intelligence.
+SwasthaTrack is a Hospital Management Information System (HMIS) and clinical workflow engine designed to reduce departmental silos, streamline patient transitions, and support emergency triage with a combined AI and rule-based engine.
 
 ---
 
@@ -23,15 +23,16 @@ SwasthaTrack is an enterprise-grade Hospital Management Information System (HMIS
 7. [Cloud Deployment Guide](#-cloud-deployment-guide)
 8. [Comprehensive Technical Interview Guide & Q/A](#-comprehensive-technical-interview-guide--qa)
 9. [Local Development & Testing](#-local-development--testing)
+10. [Limitations & Roadmap](#-limitations--roadmap)
 
 ---
 
 ## 🏛 System Architecture
 
 SwasthaTrack utilizes a modern decoupled architecture:
-- **Frontend**: Astro MPA with React Islands deployed to **Vercel Edge CDN** for lightning-fast sub-100ms first paint and minimal client bundle size.
-- **Backend**: Asynchronous FastAPI service running in a multi-stage **Docker** container behind **Gunicorn (Uvicorn Workers)** on **Render**.
-- **Database**: Managed **PostgreSQL** with connection pooling (`pool_pre_ping=True`) and **Alembic** schema migrations.
+- **Frontend**: Astro MPA with React Islands deployed to **Vercel**, with static pages and small hydrated dashboard components.
+- **Backend**: FastAPI service running in a multi-stage **Docker** container behind **Gunicorn (Uvicorn Workers)** on **Render**.
+- **Database**: **PostgreSQL** in production and SQLite for local development, with connection pooling (`pool_pre_ping=True`) and **Alembic** schema migrations.
 - **AI Intelligence**: **Google Gemini** (configurable via `GEMINI_MODEL` env var, recommended: `gemini-3.8-flash`) integrated asynchronously with a deterministic clinical heuristic fallback engine (Emergency Severity Index + Shock Index calculation + pediatric age bands).
 - **Security & Rate Limiting**: Zero-trust RBAC with **SlowAPI** rate limiting, **Google Identity Services (OAuth 2.0)**, and SuperAdmin email elevation.
 
@@ -49,7 +50,7 @@ graph TD
 
     subgraph "CI/CD Pipeline"
         GitHub["GitHub Repository (main)"] -->|"git push"| GHA["GitHub Actions CI"]
-        GHA -->|"Lint & Pytest (40 Tests)"| TestPass["Automated Test Verification"]
+        GHA -->|"Lint & Pytest (116 Tests)"| TestPass["Automated Test Verification"]
         TestPass -->|"Webhook Auto-Deploy"| Render
         TestPass -->|"Edge Auto-Deploy (12 Pages)"| Vercel
     end
@@ -73,7 +74,7 @@ sequenceDiagram
 
     Patient->>RegDesk: Presents with acute symptoms & vitals
     RegDesk->>RegDesk: Captures SpO2, BP, Pulse, Temp & History
-    RegDesk->>RegDesk: Invokes Gemini AI Triage (Calculates ESI & Shock Index)
+    RegDesk->>RegDesk: Calls server triage API (Gemini + heuristic fallback)
     RegDesk->>Doctor: Generates digital OPD Token (High priority queued first)
     Doctor->>Doctor: Reviews Patient Timeline, EMR & AI Triage Score
     Doctor->>Doctor: Enters Diagnosis (SOAP) + Prescribes Rx + Orders Labs
@@ -81,19 +82,18 @@ sequenceDiagram
     Doctor-->>Lab: Dispatches diagnostic lab requisition order
     Pharmacy->>Pharmacy: Verifies stock, dispenses medication & updates inventory
     Lab->>Lab: Accessions specimen, enters diagnostic results & syncs to EMR
-    Admin->>Admin: Monitors real-time OPD throughput, bed occupancy & turnaround times
+    Admin->>Admin: Monitors queue, prescription, lab and inventory metrics
 ```
 
 ### Role-Based Dashboard Capabilities
 
 | Clinical Console | Primary Responsibilities | Key Technologies Used |
 |---|---|---|
-### Registration & Triage
- Patient digital intake, MRN allocation, vital sign capture, AI emergency severity scoring,<br>OPD token dispatch with priority-based sorting (priority_score 1-100, critical cases queued first). | React Hook Form, Gemini Triage API, Lucide Icons |
-| **2. Doctor Station** | Live urgency-sorted queue, historical timeline, SOAP clinical notes, drug database autocomplete, instant Rx/Lab dispatch. | React, Axios, JWT RBAC, Optimistic UI |
-| **3. Pharmacy Station** | Real-time incoming prescription feed, stock tracking, batch management, low-stock threshold alerts, 1-click dispensing. | React, Reactive Polling, Tailwind CSS |
-| **4. Diagnostic Lab** | Test order accessioning, specimen status lifecycle (`pending` $\to$ `in-progress` $\to$ `completed`), quantitative result entry. | React, Standardized Diagnostic Schemas |
-| **5. Administration** | System-wide telemetry, average consultation duration, department load balancing, staff role auditing. | React, Charting Metrics, Audit Logging |
+| **1. Registration & Triage** | Patient digital intake, registration number allocation, full vital capture, server-side triage scoring,<br>queue dispatch sorted by priority score (critical cases first). | React, FastAPI Triage API, Lucide Icons |
+| **2. Doctor Station** | Live urgency-sorted queue, patient context, diagnosis notes, prescription creation, and lab order creation. | React, Axios, JWT RBAC |
+| **3. Pharmacy Station** | Incoming prescription feed, stock tracking, low-stock alerts, and dispensing with server-side stock deduction. | React, 10-second polling, Tailwind CSS |
+| **4. Diagnostic Lab** | Test order tracking, specimen status lifecycle (`pending` → `sample_collected` → `in_analysis` → `completed`), free-text result entry. | React, FastAPI lab endpoints |
+| **5. Administration** | Live patient, queue, prescription, lab, and inventory metrics from the database. | React, FastAPI aggregate dashboard endpoint |
 
 ---
 
@@ -115,31 +115,12 @@ SwasthaTrack features a resilient dual-engine clinical triage engine in [`backen
 ### 2. Clinical Quantification Logic & Thresholds
 All clinical threshold constants are centralized in [`backend/utils/triage_thresholds.py`](backend/utils/triage_thresholds.py) with `# TODO(clinician-review)` markers for values requiring clinical validation:
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                       CLINICAL ACUITY MATRIX                                │
-├──────────────┬──────────────┬───────────┬──────────────┬────────────────────┤
-│ Urgency Level│ Priority Score│ Target Wait│ Vitals Marker│ Symptom Triggers   │
-├──────────────┼──────────────┼───────────┼──────────────┼────────────────────┤
-│ EMERGENCY    │ 90 - 100     │ 0 mins    │ SpO2 < 90%   │ Severe hemorrhage, │
-│              │              │ (Immediate│ Systolic <90 │ chest pain, stroke,│
-│              │              │ Resusc.)  │ Shock Idx≥0.9│ unconsciousness,   │
-│              │              │           │ BP > 180/110 │ vomiting blood     │
-│              │              │           │ HR < 50 (bradycardia)│              │
-├──────────────┼──────────────┼───────────┼──────────────┼────────────────────┤
-│ HIGH         │ 70 - 89      │ 5-15 mins │ SpO2 90-93%  │ Fractures, acute   │
-│              │              │           │ Temp > 102.5 │ asthma, severe pain│
-│              │              │           │ HR > 130 BPM │ seizures, burns    │
-│              │              │           │ HR < 50 (pediatric/neonatal band)│    │
-├──────────────┼──────────────┼───────────┼──────────────┼────────────────────┤
-│ MEDIUM       │ 40 - 69      │ 15-30 mins│ Stable vitals│ Moderate fever,    │
-│              │              │           │ HR 100-130   │ vomiting, diarrhea,│
-│              │              │           │              │ migraine, sprains  │
-├──────────────┼──────────────┼───────────┼──────────────┼────────────────────┤
-│ LOW          │ 1 - 39       │ 30-60 mins│ Normal vitals│ Routine checkup,   │
-│              │              │           │              │ medication refill  │
-└──────────────┴──────────────┴───────────┴──────────────┴────────────────────┘
-```
+| Urgency | Priority score | Target wait | Vitals markers | Symptom triggers |
+|---|---|---|---|---|
+| **Emergency** | 90–100 | 0 min (immediate resuscitation) | SpO₂ < 90%; systolic BP < 90 mmHg; shock index ≥ 0.9 (adults only); temperature ≥ 103.5°F | Severe hemorrhage, chest pain, stroke, unconsciousness, vomiting blood |
+| **High** | 70–89 | ~10 min | 90% ≤ SpO₂ < 93%; temperature 101.5–103.5°F; HR > 130 bpm; HR < 50 bpm (adults); pediatric bradycardia (neonate < 100, infant < 90); systolic BP ≥ 180 or diastolic BP ≥ 110 mmHg | Fractures, acute asthma, severe pain, seizures, burns |
+| **Medium** | 40–69 | ~25 min | HR 100–130 bpm; stable vitals otherwise | Fever, vomiting, diarrhea, headache, sprains |
+| **Low** | 1–39 | ~40 min | Normal vitals | Routine checkup, medication refill |
 
 #### Hemorrhage & Shock Index Formula
 To quantify bleeding and prevent hypovolemic collapse:
@@ -154,7 +135,7 @@ $$\text{Shock Index (SI)} = \frac{\text{Heart Rate (BPM)}}{\text{Systolic Blood 
 SwasthaTrack adheres to enterprise-grade clinical data integrity and threat mitigation principles:
 
 ### 1. Zero-Trust Role-Based Access Control (RBAC)
-- **Synchronized Role Typing**: `UserRole` enum (`admin`, `doctor`, `pharmacist`, `lab`, `registration`, `user`) strictly enforced across SQLAlchemy models and Pydantic schemas.
+- **Synchronized Role Typing**: `UserRole` enum (`admin`, `doctor`, `pharmacist`, `lab`, `registration`, `user`) used by the Pydantic auth schemas and route allow-lists; the database column stores the role string.
 - **Privilege Escalation Guard**: Public self-registration (`POST /api/auth/register`) strictly hardcodes `role = user`. Any client-injected role payload is stripped.
 - **Admin Provisioning**: Clinical staff accounts (`doctor`, `pharmacist`, `lab`) can only be provisioned through the protected `POST /api/auth/users` endpoint requiring an authenticated `admin` JWT.
 
@@ -182,7 +163,7 @@ SwasthaTrack adheres to enterprise-grade clinical data integrity and threat miti
  - **Priority-Queued Tokens**: Queue entries are sorted by `priority_score DESC`, then `check_in_time ASC`, ensuring critical acuity cases are seen first. The `limit` parameter is capped at 200.
  - **Date-Prefixed Tokens**: Tokens are generated in `Q-YYYYMMDD-001` format, preventing token collision across consecutive hospital operating dates.
 - **Concurrency Loop**: Uses database-level collision detection loops to resolve race conditions between concurrent triage reception desks.
-- **State Transition Guard**: `PUT /api/queue/{id}/status` strictly validates transitions via `QueueStatus(str, Enum)` (`waiting`, `called`, `in-progress`, `completed`, `cancelled`, `no-show`). Invalid status transitions return HTTP 422.
+- **Status Validation**: `PUT /api/queue/{id}/status` accepts the `QueueStatus(str, Enum)` values (`waiting`, `called`, `in-progress`, `completed`, `cancelled`, `no-show`); unknown values return HTTP 422. Transition ordering is not enforced.
 
 ### 5. SlowAPI Rate Limiting & Abuse Prevention
 - Integrated **SlowAPI** middleware to safeguard against credential stuffing, brute force, and DDoS attacks.
@@ -195,7 +176,7 @@ SwasthaTrack adheres to enterprise-grade clinical data integrity and threat miti
 
 ### 6. Strict Origin CORS Whitelist
 - Eliminated permissive regex wildcards (`https?://.*`).
-- Defaults to trusted origins (`https://swasthatrack.vercel.app`, `http://localhost:4321`, `3000`, `5173`), with restricted regex allowing only official Vercel preview environments (`https://*.vercel.app`).
+- Defaults to trusted origins (`https://swasthatrack.vercel.app`, `http://localhost:4321`, `3000`, `5173`), with a restricted regex that only matches this project's Vercel preview URLs (`https://swasthatrack-*.vercel.app`).
 
 ### 7. Clinical Decision Support System (CDSS) Advisory Notice
 - To comply with clinical software regulations and mitigate medico-legal liability, AI triage outputs and risk indicators are accompanied by explicit advisory disclaimers:
@@ -210,13 +191,13 @@ SwasthaTrack adheres to enterprise-grade clinical data integrity and threat miti
 ## 🛠 Technology Stack & Architectural Rationale
 
 ### Why Render + PostgreSQL for Backend?
-1. **True Asynchronous Worker Architecture**: Unlike serverless functions (e.g. AWS Lambda / Vercel Functions) that suffer from cold starts and strict 10s execution timeouts, Render hosts persistent Docker containers with Gunicorn + Uvicorn workers handling long-lived DB connection pools and background tasks.
-2. **Infrastructure as Code (IaC)**: [`render.yaml`](render.yaml) defines both the web service and managed PostgreSQL in code, allowing 1-click reproducible deployments.
-3. **Database Security & ACID Compliance**: Managed PostgreSQL provides connection pooling, automated backups, and row-level locking for inventory operations.
+1. **Persistent Worker Architecture**: Unlike serverless functions (e.g. AWS Lambda / Vercel Functions) that suffer from cold starts and strict 10s execution timeouts, Render hosts persistent Docker containers with Gunicorn + Uvicorn workers that keep DB connection pools alive between requests.
+2. **Infrastructure as Code (IaC)**: [`render.yaml`](render.yaml) defines the web service; `DATABASE_URL` is supplied manually for an external PostgreSQL provider.
+3. **Database Security & ACID Compliance**: PostgreSQL provides transactional inventory updates and row-level locking for stock deduction.
 
 ### Why Vercel Edge for Frontend?
-1. **Astro MPA + React Islands**: Delivers pre-rendered HTML with 0kb JavaScript overhead for static pages (`/`, `/about`, `/contact`), hydrating React components only where interactivity is needed (`/dashboard/*`).
-2. **Global Edge CDN**: Sub-50ms Time-to-First-Byte (TTFB) across the globe.
+1. **Astro MPA + React Islands**: Delivers pre-rendered HTML, hydrating React components only where interactivity is needed (`/dashboard/*`, the homepage simulator).
+2. **Global Edge CDN**: Static pages are served from Vercel's edge network; dashboard pages hydrate React islands.
 
 ### Alternatives Comparison Matrix
 
@@ -235,14 +216,14 @@ SwasthaTrack adheres to enterprise-grade clinical data integrity and threat miti
 [`backend/Dockerfile`](backend/Dockerfile) utilizes a 2-stage build to minimize image size and eliminate build tool security vulnerabilities:
 
 1. **Stage 1 (Builder)**: Compiles native C-extensions (`libpq-dev`, `gcc`) and installs dependencies inside an isolated `/opt/venv` virtual environment.
-2. **Stage 2 (Runtime)**: Uses clean `python:3.12-slim`, copies pre-built `/opt/venv`, creates an unprivileged non-root system user (`swastha`), and runs Gunicorn with internal healthchecks (`/health`).
+2. **Stage 2 (Runtime)**: Uses clean `python:3.12-slim`, copies pre-built `/opt/venv`, creates an unprivileged non-root system user (`swastha`), and runs Gunicorn. Render uses the `/health` endpoint as its health check.
 
 ### Continuous Integration Pipeline
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) triggers on every push and PR to `main`:
-- **Backend CI Job**: Sets up Python 3.12, installs dependencies, runs **ruff lint**, and executes the full pytest suite (**108 tests** covering auth, AI triage with mock transport, patient intake, concurrency-safe queues, object-level authorization (IDOR protection), prescriptions, lab orders, and audit logging).
-- **Frontend CI Job**: Sets up Node.js 20, runs `astro check` for TypeScript type verification, builds the Astro static output (12 pages), and uploads coverage artifacts.
+- **Backend CI Job**: Sets up Python 3.12, installs dependencies, runs **ruff lint**, executes the full pytest suite (**116 tests** covering auth, AI triage with mock transport, patient intake, concurrency-safe queues, object-level authorization (IDOR protection), prescriptions, lab orders, and audit logging), and uploads backend coverage.
+- **Frontend CI Job**: Sets up Node.js 22, runs `astro check`, and builds the Astro static output (12 pages).
 - **Security Scanning**: `pip-audit` scans for known vulnerabilities in Python dependencies.
-- Database: Postgres service container with test fixtures for integration testing.
+- **Test database**: CI currently runs against in-memory SQLite; PostgreSQL-specific integration tests are on the roadmap.
 
 ### Dependency Updates
 GitHub Dependabot is configured in [`.github/dependabot.yml`](.github/dependabot.yml) to automatically scan and update:
@@ -266,10 +247,9 @@ GitHub Dependabot is configured in [`.github/dependabot.yml`](.github/dependabot
 2. Log in to [Render](https://render.com).
 3. Click **New +** $\longrightarrow$ **Blueprint**.
 4. Select your `swasthatrack` repository.
-5. Render detects [`render.yaml`](render.yaml) and automatically creates:
-   - Managed PostgreSQL database (`swasthatrack-db`)
-   - Web service (`swasthatrack-api`)
+5. Render detects [`render.yaml`](render.yaml) and creates the web service (`swasthatrack-api`). The blueprint does not provision a database.
 6. In Render Dashboard $\longrightarrow$ `swasthatrack-api` $\longrightarrow$ **Environment**:
+    - Add `DATABASE_URL` for your PostgreSQL provider (for example Neon)
     - Add `GEMINI_API_KEY` = `your_google_ai_studio_api_key`
     - Add `GEMINI_MODEL` = `gemini-3.8-flash` (recommended; must be set explicitly — no default model is provided)
 7. Click **Apply**. Your API will be live at `https://swasthatrack-api.onrender.com`.
@@ -291,28 +271,28 @@ When presenting SwasthaTrack in technical interviews, use these structured talki
 ### 1. System Design & Concurrency
 **Q: "How did you design the system to handle concurrent hospital traffic and prevent race conditions?"**
 > **Answer**:  
-> *"SwasthaTrack is built with a decoupled architecture. On the API layer, FastAPI with ASGI asynchronous worker processes handles high I/O concurrency without thread starvation. On the database tier, SQLAlchemy manages connection pooling with PostgreSQL. To prevent race conditions during patient registration and pharmacy inventory deduction, we implement database-level unique constraints on Medical Record Numbers (MRN) and atomic SQL update statements with transactional rollbacks on out-of-stock scenarios."*
+> *"SwasthaTrack uses a decoupled architecture: FastAPI served by Gunicorn/Uvicorn workers, SQLAlchemy for persistence, and PostgreSQL in production. To prevent duplicate queue tokens, queue numbers are unique and the insert retries on integrity errors. Patient registration numbers are also unique. Pharmacy dispensing uses transactional stock checks and atomic SQL updates, and the whole status change rolls back if any medicine is expired or short on stock."*
 
 ---
 
 ### 2. State Latency & Departmental Synchronization
-**Q: "How do you achieve sub-150ms state updates between doctor prescriptions and the pharmacy dispensary?"**
+**Q: "How do doctor prescriptions reach the pharmacy dispensary?"**
 > **Answer**:  
-> *"We separated static presentation from dynamic state. Astro compiles marketing pages into static HTML served from edge caches. In clinical workspaces, lightweight React Islands interact directly with optimized FastAPI endpoints indexed on patient IDs and queue statuses. Response payloads average under 25ms on the server, resulting in sub-150ms perceived state reflection on the clinical dashboards."*
+> *"Static pages are pre-rendered by Astro, while each clinical workspace is a React island that calls the FastAPI API with a bearer token. When a doctor creates a prescription, it is stored with a pending status. The pharmacy screen polls the prescription and medicine endpoints every ten seconds while the tab is visible, and dispensing triggers a server-side status transition that deducts linked medicine stock transactionally. This is deliberate polling rather than websockets, which keeps the deployment simple; latency depends on the database and network, so I do not quote a fixed millisecond figure."*
 
 ---
 
 ### 3. Fault-Tolerant AI Design
 **Q: "What happens if the Gemini LLM API goes down or exceeds its rate limit during an emergency?"**
 > **Answer**:  
-> *"In a clinical environment, zero downtime is a strict requirement. We designed a heuristic-first dual-engine architecture: the rule-based engine evaluates vitals and symptoms instantly using the Emergency Severity Index protocol (2ms latency), including Shock Index calculation, critical bradycardia detection, and pediatric age band thresholds. The Gemini AI engine runs asynchronously afterward with a 3-second timeout and 1 retry via a shared `httpx.AsyncClient`, sending the API key via the `x-goog-api-key` header (not URL). The system returns whichever engine assigns the higher urgency. All failure modes — network timeouts, HTTP 429 rate limits, invalid JSON, missing API keys — trigger fallback to the deterministic heuristic engine."*
+> *"The heuristic engine always runs first, so triage still returns a result if the AI provider is unavailable. It evaluates vitals and symptoms using the Emergency Severity Index protocol, including Shock Index for adults, critical bradycardia detection, and pediatric age bands marked for clinician review. When configured, the Gemini call runs asynchronously with a 3-second timeout and one retry through a shared `httpx.AsyncClient`, with the API key sent in the `x-goog-api-key` header. The API returns whichever engine assigns the higher urgency. Missing keys, timeouts, HTTP 429 responses, and invalid JSON all fall back to the heuristic result."*
 
 ---
 
 ### 4. Security & Role-Based Access Control
 **Q: "How is patient health information protected across different roles?"**
 > **Answer**:  
-> *"We implemented JSON Web Tokens (JWT) with HMAC-SHA256 signature verification and bcrypt password hashing. Granular Role-Based Access Control (RBAC) middleware inspects each incoming request. For example, a pharmacist token is restricted from updating clinical diagnosis notes, while an unauthenticated client cannot query patient queues or medical histories. All database models conform to standardized electronic medical record structures."*
+> *"We implemented JSON Web Tokens (JWT) with HMAC-SHA256 signature verification and bcrypt password hashing. Route dependencies load the current user from the database and check their role against an allow-list. For example, only pharmacists and administrators can dispense a prescription, and only doctors and administrators can create prescriptions or lab orders. Patient and queue endpoints also check object-level access for non-clinical users."*
 
 ---
 
@@ -327,7 +307,7 @@ When presenting SwasthaTrack in technical interviews, use these structured talki
 
 ### 1. Prerequisites
 - Python 3.11+
-- Node.js 18+
+- Node.js 22.12+ (see `frontend-v2/package.json`)
 - Git
 
 ---
@@ -397,7 +377,7 @@ npm run dev
 
 ### 🧪 Running Test Suites
 ```bash
-# Run backend pytest suite (108 tests across all subsystems)
+# Run backend pytest suite (116 tests across all subsystems)
 cd backend
 python -m pytest
 
@@ -408,6 +388,26 @@ ruff check .
 cd frontend-v2
 npm run build
 ```
+
+---
+
+## ⚠️ Limitations & Roadmap
+
+### Current limitations
+- Dashboard data refreshes by polling every 10–15 seconds while the tab is visible. There is no websocket or server-sent-event channel.
+- Most request handlers use synchronous SQLAlchemy sessions inside FastAPI routes, and a few auth routes perform blocking bcrypt work.
+- The automated backend suite runs against in-memory SQLite. PostgreSQL-specific behavior is not covered in CI.
+- Prescription medicines are stored as JSON, with optional linked medicine rows. Dispensing deducts stock only when a medicine name matches a catalogue entry.
+- AI triage is advisory. Clinical thresholds still carry `# TODO(clinician-review)` markers and need clinician sign-off.
+- The UI covers OPD registration, doctor consultation, pharmacy, lab, and administration. Appointment scheduling, billing, and bed management screens are not implemented.
+- Google sign-in requires a configured `GOOGLE_CLIENT_ID`; without it, only the local username/password flow is available.
+
+### Roadmap
+- Add a PostgreSQL-backed test job in CI alongside the SQLite suite.
+- Move blocking database and bcrypt work off the event loop, or migrate to async SQLAlchemy.
+- Replace dashboard polling with websockets or server-sent events.
+- Add batch-level inventory tracking and explicit medicine-link management.
+- Complete clinician review of all triage thresholds and document the sources.
 
 ---
 

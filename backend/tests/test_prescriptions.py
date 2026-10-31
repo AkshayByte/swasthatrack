@@ -222,6 +222,60 @@ def test_prescribed_by_uses_authenticated_user(client: TestClient, doctor_token:
     assert data["doctor_name"]  # Must have the real authenticated user's name
 
 
+def test_create_prescription_accepts_free_text_medicines(
+    client: TestClient, doctor_token: str, sample_patient: Patient
+):
+    """A legacy free-text medicines value must not crash the endpoint with a 500."""
+    response = client.post(
+        "/api/prescriptions/",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={"patient_id": sample_patient.id, "medicines": "Paracetamol 650mg"},
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["medicines"] == [{"name": "Paracetamol 650mg"}]
+
+
+def test_create_prescription_accepts_json_string_medicines(
+    client: TestClient, doctor_token: str, sample_patient: Patient
+):
+    """A JSON-encoded string medicines value must be parsed into structured items."""
+    response = client.post(
+        "/api/prescriptions/",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={
+            "patient_id": sample_patient.id,
+            "medicines": '[{"name": "Aspirin 75mg", "quantity": 2}]',
+        },
+    )
+    assert response.status_code == 201
+    assert response.json()["medicines"] == [{"name": "Aspirin 75mg", "quantity": 2}]
+
+
+def test_create_prescription_cannot_bypass_dispensing_state(
+    client: TestClient, db_session: Session, doctor_token: str, sample_patient: Patient
+):
+    """Clients must not create an already-dispensed prescription and skip stock deduction."""
+    med = Medicine(name="Metformin 500mg", current_stock=10, minimum_stock=0)
+    db_session.add(med)
+    db_session.commit()
+
+    response = client.post(
+        "/api/prescriptions/",
+        headers={"Authorization": f"Bearer {doctor_token}"},
+        json={
+            "patient_id": sample_patient.id,
+            "medicines": [{"name": med.name, "quantity": 2}],
+            "status": "dispensed",
+        },
+    )
+    assert response.status_code == 201
+    assert response.json()["status"] == "pending"
+
+    db_session.expire_all()
+    assert db_session.query(Medicine).filter(Medicine.id == med.id).first().current_stock == 10
+
+
 # ─── Task 6: Real inventory deduction ─────────────────────────────────────────
 
 def _create_medicine(db_session: Session, name: str, stock: int):

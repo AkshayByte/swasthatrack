@@ -86,7 +86,8 @@ def create_lab_order(
         patient_id=data.patient_id,
         test_name=data.test_name,
         test_type=category,
-        status=data.status or "pending",
+        # A new order always starts pending; the lab advances it later.
+        status="pending",
         ordered_by=doctor_name,
         ordered_at=datetime.now(timezone.utc),
         notes=data.notes,

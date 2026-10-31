@@ -12,7 +12,6 @@ class LabOrderCreateRequest(BaseModel):
     category: str | None = "General"
     test_type: str | None = None
     priority: str | None = "routine"
-    status: str | None = "pending"
     notes: str | None = None
 
 
