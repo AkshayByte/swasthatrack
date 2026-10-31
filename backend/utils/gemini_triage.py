@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import re
+from time import monotonic
 
 import httpx
 from dotenv import load_dotenv
@@ -49,6 +50,13 @@ logger = logging.getLogger(__name__)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "").strip()
 
+GEMINI_REQUEST_TIMEOUT_SECONDS = 2.0
+GEMINI_CIRCUIT_FAILURE_THRESHOLD = 2
+GEMINI_CIRCUIT_COOLDOWN_SECONDS = 60
+
+_gemini_failure_count = 0
+_gemini_circuit_open_until = 0.0
+
 # Shared async HTTP client — created lazily, reused across calls
 _shared_http_client: httpx.AsyncClient | None = None
 
@@ -56,8 +64,41 @@ _shared_http_client: httpx.AsyncClient | None = None
 def _get_shared_client() -> httpx.AsyncClient:
     global _shared_http_client
     if _shared_http_client is None or _shared_http_client.is_closed:
-        _shared_http_client = httpx.AsyncClient(timeout=3.0)
+        _shared_http_client = httpx.AsyncClient(timeout=GEMINI_REQUEST_TIMEOUT_SECONDS)
     return _shared_http_client
+
+
+def _circuit_is_open() -> bool:
+    global _gemini_failure_count, _gemini_circuit_open_until
+    if _gemini_circuit_open_until and monotonic() >= _gemini_circuit_open_until:
+        _gemini_failure_count = 0
+        _gemini_circuit_open_until = 0.0
+    return _gemini_circuit_open_until > 0.0
+
+
+def _record_gemini_failure() -> None:
+    global _gemini_failure_count, _gemini_circuit_open_until
+    _gemini_failure_count += 1
+    if _gemini_failure_count >= GEMINI_CIRCUIT_FAILURE_THRESHOLD:
+        _gemini_circuit_open_until = monotonic() + GEMINI_CIRCUIT_COOLDOWN_SECONDS
+        logger.warning(
+            "Gemini circuit breaker opened after %d consecutive failures; "
+            "skipping Gemini for %d seconds.",
+            _gemini_failure_count,
+            GEMINI_CIRCUIT_COOLDOWN_SECONDS,
+        )
+
+
+def _record_gemini_success() -> None:
+    global _gemini_failure_count, _gemini_circuit_open_until
+    _gemini_failure_count = 0
+    _gemini_circuit_open_until = 0.0
+
+
+def _reset_circuit_breaker() -> None:
+    global _gemini_failure_count, _gemini_circuit_open_until
+    _gemini_failure_count = 0
+    _gemini_circuit_open_until = 0.0
 
 
 async def _close_shared_client():
@@ -339,6 +380,10 @@ async def _call_gemini(request: TriageRequest, client: httpx.AsyncClient) -> Tri
 
     max_retries = 1
     for attempt in range(max_retries + 1):
+        if _circuit_is_open():
+            logger.info("Gemini circuit breaker is open — skipping call and using heuristic triage.")
+            return None
+
         try:
             response = await client.post(url, headers=headers, json=payload)
             response.raise_for_status()
@@ -355,6 +400,8 @@ async def _call_gemini(request: TriageRequest, client: httpx.AsyncClient) -> Tri
             # Clamp priority_score into the band of the returned urgency
             priority = clamp_score(priority, urgency)
 
+            _record_gemini_success()
+
             return TriageResponse(
                 urgency=urgency,
                 priority_score=priority,
@@ -366,18 +413,21 @@ async def _call_gemini(request: TriageRequest, client: httpx.AsyncClient) -> Tri
             )
 
         except (httpx.HTTPStatusError, json.JSONDecodeError, KeyError, ValueError, TypeError) as e:
+            _record_gemini_failure()
             logger.warning(f"Gemini API triage call failed (attempt {attempt + 1}): {e!s}")
             if attempt >= max_retries:
                 logger.info("Gemini API triage failed after retry — falling back to heuristic.")
                 return None
             await asyncio.sleep(0.5)
         except httpx.TimeoutException:
+            _record_gemini_failure()
             logger.warning(f"Gemini API triage timed out (attempt {attempt + 1})")
             if attempt >= max_retries:
                 logger.info("Gemini API triage timed out after retry — falling back to heuristic.")
                 return None
             await asyncio.sleep(0.5)
         except Exception as e:
+            _record_gemini_failure()
             logger.warning(f"Gemini API triage encountered unexpected error (attempt {attempt + 1}): {e!s}")
             if attempt >= max_retries:
                 return None
@@ -415,6 +465,10 @@ async def analyze_clinical_triage(request: TriageRequest) -> TriageResponse:
     # If Gemini is not configured, return heuristic result
     if not GEMINI_API_KEY or not GEMINI_MODEL:
         logger.info("Using heuristic triage engine (Gemini API key or model not configured).")
+        return heuristic_result
+
+    if _circuit_is_open():
+        logger.info("Gemini circuit breaker is open — returning heuristic triage.")
         return heuristic_result
 
     client = _get_shared_client()

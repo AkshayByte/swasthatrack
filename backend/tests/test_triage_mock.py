@@ -5,6 +5,7 @@ import pytest
 
 from schemas.queue import TriageRequest, TriageResponse, VitalsInput
 from utils.gemini_triage import (
+    _circuit_is_open,
     _get_shared_client,
     _heuristic_triage,
     analyze_clinical_triage,
@@ -330,3 +331,60 @@ async def test_neonatal_bradycardia_escalates(monkeypatch):
     result = _heuristic_triage(req)
     assert result.urgency == "high"
     assert any("Bradycardia" in ind for ind in result.diagnostic_indicators)
+
+
+@pytest.mark.asyncio
+async def test_circuit_breaker_opens_after_two_failures(monkeypatch):
+    monkeypatch.setattr("utils.gemini_triage.GEMINI_API_KEY", "fake-key")
+    monkeypatch.setattr("utils.gemini_triage.GEMINI_MODEL", "gemini-3.8-flash")
+
+    calls = {"count": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["count"] += 1
+        return httpx.Response(429, json={"error": "rate limit exceeded"})
+
+    transport = _mock_transport(handler)
+    req = TriageRequest(symptoms="Mild cough for two days", vitals=None, age=25)
+
+    first = await _run_with_mock_gkei(transport, req)
+    assert first.source == "heuristic_fallback"
+    assert calls["count"] == 2
+    assert _circuit_is_open() is True
+
+    second = await _run_with_mock_gkei(transport, req)
+    assert second.source == "heuristic_fallback"
+    assert calls["count"] == 2
+
+
+@pytest.mark.asyncio
+async def test_circuit_breaker_closes_after_cooldown(monkeypatch):
+    now = {"value": 1000.0}
+    monkeypatch.setattr("utils.gemini_triage.monotonic", lambda: now["value"])
+    monkeypatch.setattr("utils.gemini_triage.GEMINI_API_KEY", "fake-key")
+    monkeypatch.setattr("utils.gemini_triage.GEMINI_MODEL", "gemini-3.8-flash")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(429, json={"error": "rate limit exceeded"})
+
+    req = TriageRequest(symptoms="Mild cough for two days", vitals=None, age=25)
+    failed = await _run_with_mock_gkei(_mock_transport(handler), req)
+    assert failed.source == "heuristic_fallback"
+    assert _circuit_is_open() is True
+
+    now["value"] += 61.0
+
+    payload = _make_gemini_response(
+        {
+            "urgency": "medium",
+            "priority_score": 55,
+            "recommended_department": "General Medicine OPD",
+            "estimated_wait_minutes": 20,
+            "diagnostic_indicators": ["cough"],
+            "reasoning": "Mild cough, stable vitals.",
+        }
+    )
+
+    recovered = await _run_with_mock_gkei(_mock_transport(payload), req)
+    assert recovered.source == "gemini"
+    assert _circuit_is_open() is False

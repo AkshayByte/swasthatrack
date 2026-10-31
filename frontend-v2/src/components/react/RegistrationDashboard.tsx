@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { SwasthaAPI, type QueueEntry, type QueueStatus, type TriageResult, type TriageUrgency } from '../../lib/api';
+import { SwasthaAPI, formatApiError, type QueueEntry, type QueueStatus, type TriageResult, type TriageUrgency } from '../../lib/api';
+import DashboardErrorBoundary from './DashboardErrorBoundary';
 import { UserPlus, Sparkles, Clock, AlertTriangle, CheckCircle2, ArrowRight, Zap } from 'lucide-react';
 import {
   priorityBadge, statusBadge,
@@ -11,7 +12,21 @@ import {
 
 const ACTIVE_QUEUE_STATUSES: QueueStatus[] = ['waiting', 'called', 'in-progress'];
 
-export default function RegistrationDashboard() {
+function buildTriageKey(
+  symptoms: string, temp: string, bp: string, spo2: string, hr: string, age: string, gender: string
+) {
+  return JSON.stringify({
+    symptoms: symptoms.trim(),
+    temp,
+    bp,
+    spo2,
+    hr,
+    age: Number(age) || undefined,
+    gender,
+  });
+}
+
+function RegistrationDashboardContent() {
   const [queue, setQueue] = useState<QueueEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -28,6 +43,7 @@ export default function RegistrationDashboard() {
   const [hr, setHr] = useState('');
 
   const [aiTriage, setAiTriage] = useState<TriageResult | null>(null);
+  const [aiTriageKey, setAiTriageKey] = useState('');
   const [overrideUrgency, setOverrideUrgency] = useState<TriageUrgency | ''>('');
   const [triageLoading, setTriageLoading] = useState(false);
   const [triageError, setTriageError] = useState('');
@@ -75,6 +91,7 @@ export default function RegistrationDashboard() {
   useEffect(() => {
     if (symptoms.trim().length <= 3) {
       setAiTriage(null);
+      setAiTriageKey('');
       setOverrideUrgency('');
       setTriageError('');
       setTriageLoading(false);
@@ -84,6 +101,7 @@ export default function RegistrationDashboard() {
     let cancelled = false;
     setTriageLoading(true);
     setTriageError('');
+    const requestKey = buildTriageKey(symptoms, temp, bp, spo2, hr, age, gender);
 
     const timeout = setTimeout(async () => {
       try {
@@ -92,11 +110,15 @@ export default function RegistrationDashboard() {
           { temp, bp, spo2, hr },
           { age: Number(age) || undefined, gender }
         );
-        if (!cancelled) setAiTriage(triage);
+        if (!cancelled) {
+          setAiTriage(triage);
+          setAiTriageKey(requestKey);
+        }
       } catch (err: any) {
         if (!cancelled) {
           setAiTriage(null);
-          setTriageError(err?.response?.data?.detail || err?.message || 'Triage service unavailable.');
+          setAiTriageKey('');
+          setTriageError(formatApiError(err, 'Triage service unavailable.'));
         }
       } finally {
         if (!cancelled) setTriageLoading(false);
@@ -122,11 +144,19 @@ export default function RegistrationDashboard() {
     setSubmitting(true);
     setError('');
     try {
-      const triage = await SwasthaAPI.calculateAITriage(
-        symptoms || 'General Checkup',
-        { temp, bp, spo2, hr },
-        { age: Number(age) || undefined, gender }
-      );
+      const triageKey = buildTriageKey(symptoms, temp, bp, spo2, hr, age, gender);
+      let triage: TriageResult;
+      if (aiTriage && aiTriageKey === triageKey) {
+        triage = aiTriage;
+      } else {
+        triage = await SwasthaAPI.calculateAITriage(
+          symptoms || 'General Checkup',
+          { temp, bp, spo2, hr },
+          { age: Number(age) || undefined, gender }
+        );
+        setAiTriage(triage);
+        setAiTriageKey(triageKey);
+      }
 
       // Step 1: Create patient
       const np = await SwasthaAPI.createPatient({
@@ -157,9 +187,9 @@ export default function RegistrationDashboard() {
 
       await loadData();
       setSuccessMessage(`${name} registered — ${effectiveUrgency.toUpperCase()} priority, routed to ${triage.recommendedDepartment}`);
-      setName(''); setAge(''); setPhone(''); setSymptoms(''); setAiTriage(null); setOverrideUrgency('');
+      setName(''); setAge(''); setPhone(''); setSymptoms(''); setAiTriage(null); setAiTriageKey(''); setOverrideUrgency('');
     } catch (err: any) {
-      setError(err?.response?.data?.detail || err?.message || 'Registration failed. Please try again.');
+      setError(formatApiError(err, 'Registration failed. Please try again.'));
     } finally {
       setSubmitting(false);
       setTimeout(() => { setSuccessMessage(''); setError(''); }, 6000);
@@ -171,7 +201,7 @@ export default function RegistrationDashboard() {
       await SwasthaAPI.updateQueueStatus(id, status);
       setQueue(prev => prev.map(q => q.id === id ? { ...q, status } : q));
     } catch (err: any) {
-      const msg = err?.response?.data?.detail || err?.message || 'Failed to update status';
+      const msg = formatApiError(err, 'Failed to update status');
       setError(`Unable to ${status === 'completed' ? 'complete' : status === 'in-progress' ? 'call in' : 'cancel'} patient: ${msg}`);
     }
   };
@@ -483,5 +513,13 @@ export default function RegistrationDashboard() {
 
       </div>
     </div>
+  );
+}
+
+export default function RegistrationDashboard() {
+  return (
+    <DashboardErrorBoundary label="Registration">
+      <RegistrationDashboardContent />
+    </DashboardErrorBoundary>
   );
 }

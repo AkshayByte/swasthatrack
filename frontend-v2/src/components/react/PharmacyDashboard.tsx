@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { SwasthaAPI, type Medicine, type Prescription } from '../../lib/api';
+import { SwasthaAPI, formatApiError, type Medicine, type Prescription } from '../../lib/api';
+import DashboardErrorBoundary from './DashboardErrorBoundary';
 import { Pill, CheckCircle2, Package, Truck, AlertTriangle, Search, ShieldCheck } from 'lucide-react';
 import {
   statusBadge,
@@ -7,7 +8,7 @@ import {
   card, cardHeader, pageHeader, statPill, toast as toastCls, alertDanger,
 } from '../../lib/ui';
 
-export default function PharmacyDashboard() {
+function PharmacyDashboardContent() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [inventory, setInventory] = useState<Medicine[]>([]);
   const [filter, setFilter] = useState<'all' | 'pending' | 'dispensed'>('pending');
@@ -26,7 +27,7 @@ export default function PharmacyDashboard() {
       setInventory(medicineList);
       setError('');
     } catch (err: any) {
-      setError(err?.response?.data?.detail || err?.message || 'Failed to load pharmacy data.');
+      setError(formatApiError(err, 'Failed to load pharmacy data.'));
     } finally {
       setLoading(false);
     }
@@ -58,7 +59,7 @@ export default function PharmacyDashboard() {
       setToast(`Prescription #${rxId} dispensed. Inventory refreshed from the server.`);
       setTimeout(() => setToast(''), 5000);
     } catch (err: any) {
-      setError(err?.response?.data?.detail || err?.message || `Failed to dispense prescription #${rxId}.`);
+      setError(formatApiError(err, `Failed to dispense prescription #${rxId}.`));
     }
   };
 
@@ -270,5 +271,13 @@ export default function PharmacyDashboard() {
 
       </div>
     </div>
+  );
+}
+
+export default function PharmacyDashboard() {
+  return (
+    <DashboardErrorBoundary label="Pharmacy">
+      <PharmacyDashboardContent />
+    </DashboardErrorBoundary>
   );
 }

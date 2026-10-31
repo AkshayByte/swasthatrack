@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Shield, Users, Activity, FlaskConical, Package, AlertTriangle, CheckCircle2, RefreshCw } from 'lucide-react';
-import { SwasthaAPI, type DashboardSummary } from '../../lib/api';
+import { SwasthaAPI, formatApiError, type DashboardSummary } from '../../lib/api';
+import DashboardErrorBoundary from './DashboardErrorBoundary';
 import {
   btnPrimary,
   card, cardHeader, pageHeader, toast as toastCls, alertDanger,
 } from '../../lib/ui';
 
-export default function AdminDashboard() {
+function AdminDashboardContent() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -23,7 +24,7 @@ export default function AdminDashboard() {
         setTimeout(() => setToast(''), 4000);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.detail || err?.message || 'Failed to load dashboard metrics.');
+      setError(formatApiError(err, 'Failed to load dashboard metrics.'));
     } finally {
       setRefreshing(false);
     }
@@ -205,5 +206,13 @@ export default function AdminDashboard() {
 
       </div>
     </div>
+  );
+}
+
+export default function AdminDashboard() {
+  return (
+    <DashboardErrorBoundary label="Admin">
+      <AdminDashboardContent />
+    </DashboardErrorBoundary>
   );
 }

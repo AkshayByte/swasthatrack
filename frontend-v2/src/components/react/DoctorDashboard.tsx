@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { SwasthaAPI, type Patient, type QueueEntry, type QueueStatus } from '../../lib/api';
+import { SwasthaAPI, formatApiError, type Patient, type QueueEntry, type QueueStatus } from '../../lib/api';
+import DashboardErrorBoundary from './DashboardErrorBoundary';
 import { Stethoscope, Pill, FlaskConical, AlertCircle, CheckCircle2, HeartPulse, FileText, Send, Activity, Clock } from 'lucide-react';
 import {
   priorityBadge,
@@ -11,7 +12,7 @@ import {
 
 const ACTIVE_QUEUE_STATUSES: QueueStatus[] = ['waiting', 'called', 'in-progress'];
 
-export default function DoctorDashboard() {
+function DoctorDashboardContent() {
   const [queue, setQueue] = useState<QueueEntry[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedQueueItem, setSelectedQueueItem] = useState<QueueEntry | null>(null);
@@ -111,7 +112,7 @@ export default function DoctorDashboard() {
         notes: diagnosis || undefined,
       });
     } catch (err: any) {
-      setError(err?.response?.data?.detail || err?.message || 'Failed to send prescription.');
+      setError(formatApiError(err, 'Failed to send prescription.'));
       return;
     }
 
@@ -120,7 +121,7 @@ export default function DoctorDashboard() {
       try {
         await SwasthaAPI.updateQueueStatus(selectedQueueItem.id, 'completed');
       } catch (err: any) {
-        queueError = err?.response?.data?.detail || err?.message || 'Queue status update failed.';
+        queueError = formatApiError(err, 'Queue status update failed.');
       }
     }
 
@@ -149,7 +150,7 @@ export default function DoctorDashboard() {
       setNotification(`Lab order "${labTestName.trim()}" sent to the pathology lab.`);
       setTimeout(() => setNotification(''), 5000);
     } catch (err: any) {
-      setError(err?.response?.data?.detail || err?.message || 'Failed to create lab order.');
+      setError(formatApiError(err, 'Failed to create lab order.'));
     }
   };
 
@@ -379,5 +380,13 @@ export default function DoctorDashboard() {
 
       </div>
     </div>
+  );
+}
+
+export default function DoctorDashboard() {
+  return (
+    <DashboardErrorBoundary label="Doctor">
+      <DoctorDashboardContent />
+    </DashboardErrorBoundary>
   );
 }

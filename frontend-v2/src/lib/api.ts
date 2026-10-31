@@ -8,6 +8,26 @@ const rawBaseUrl =
 const cleanBaseUrl = rawBaseUrl.replace(/\/+$/, '');
 const API_BASE_URL = cleanBaseUrl.endsWith('/api') ? cleanBaseUrl : `${cleanBaseUrl}/api`;
 
+export function formatApiError(err: any, fallback = 'Something went wrong.'): string {
+  const detail = err?.response?.data?.detail;
+
+  if (Array.isArray(detail)) {
+    const messages = detail.map((item: any) => {
+      const field = Array.isArray(item?.loc)
+        ? item.loc.filter((part: string | number) => part !== 'body').join('.')
+        : '';
+      const message = typeof item?.msg === 'string' ? item.msg : String(item);
+      return field ? `${field}: ${message}` : message;
+    });
+    if (messages.length > 0) return messages.join('; ');
+  }
+
+  if (typeof detail === 'string' && detail.trim()) return detail;
+  if (detail && typeof detail === 'object') return JSON.stringify(detail);
+  if (typeof err?.message === 'string' && err.message.trim()) return err.message;
+  return fallback;
+}
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {

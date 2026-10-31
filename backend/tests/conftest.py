@@ -21,6 +21,16 @@ from utils.security import get_password_hash
 
 limiter.enabled = False
 
+
+@pytest.fixture(autouse=True)
+def reset_gemini_circuit_breaker():
+    from utils import gemini_triage
+
+    gemini_triage._reset_circuit_breaker()
+    yield
+    gemini_triage._reset_circuit_breaker()
+
+
 # Default to in-memory SQLite. CI also runs this suite against PostgreSQL by
 # setting TEST_DATABASE_URL to a PostgreSQL connection string.
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "").strip()

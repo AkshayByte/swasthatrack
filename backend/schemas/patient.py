@@ -1,6 +1,7 @@
+import re
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class PatientBase(BaseModel):
@@ -16,8 +17,15 @@ class PatientBase(BaseModel):
     medical_history: list[str] | None = []
     status: str = "active"
 
+    @field_validator("phone", mode="before")
+    @classmethod
+    def normalize_phone(cls, value):
+        if isinstance(value, str):
+            return re.sub(r"[\s\-()]", "", value)
+        return value
+
 class PatientCreate(PatientBase):
-    registration_number: str
+    registration_number: str | None = None
 
 class PatientUpdate(BaseModel):
     name: str | None = None

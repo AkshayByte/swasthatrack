@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { SwasthaAPI, type LabOrder } from '../../lib/api';
+import { SwasthaAPI, formatApiError, type LabOrder } from '../../lib/api';
+import DashboardErrorBoundary from './DashboardErrorBoundary';
 import { FlaskConical, CheckCircle2, AlertTriangle } from 'lucide-react';
 import {
   priorityBadge, statusBadge,
@@ -9,7 +10,7 @@ import {
   listItem, listItemSelected, listItemEmergency,
 } from '../../lib/ui';
 
-export default function LabDashboard() {
+function LabDashboardContent() {
   const [labOrders, setLabOrders] = useState<LabOrder[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<LabOrder | null>(null);
   const [resultText, setResultText] = useState('');
@@ -27,7 +28,7 @@ export default function LabDashboard() {
       });
       setError('');
     } catch (err: any) {
-      setError(err?.response?.data?.detail || err?.message || 'Failed to load lab orders.');
+      setError(formatApiError(err, 'Failed to load lab orders.'));
     } finally {
       setLoading(false);
     }
@@ -60,7 +61,7 @@ export default function LabDashboard() {
       setToast(`Order #${id} updated to ${nextStatus.replace('_', ' ')}.`);
       setTimeout(() => setToast(''), 4500);
     } catch (err: any) {
-      setError(err?.response?.data?.detail || err?.message || `Failed to update order #${id}.`);
+      setError(formatApiError(err, `Failed to update order #${id}.`));
     }
   };
 
@@ -239,5 +240,13 @@ export default function LabDashboard() {
 
       </div>
     </div>
+  );
+}
+
+export default function LabDashboard() {
+  return (
+    <DashboardErrorBoundary label="Lab">
+      <LabDashboardContent />
+    </DashboardErrorBoundary>
   );
 }

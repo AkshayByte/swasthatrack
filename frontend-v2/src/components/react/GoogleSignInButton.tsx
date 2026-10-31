@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { loginWithGoogle } from '../../lib/auth';
+import { formatApiError } from '../../lib/api';
 
 declare global {
   interface Window {
@@ -93,7 +94,7 @@ export default function GoogleSignInButton({ onSuccessRedirect, onSuccess }: Goo
         window.location.href = dest;
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.detail || err?.message || 'Google authentication failed.';
+      const msg = formatApiError(err, 'Google authentication failed.');
       setError(msg);
       setIsLoading(false);
     }

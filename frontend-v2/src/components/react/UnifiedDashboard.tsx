@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { SwasthaAPI, type QueueEntry, type Prescription, type LabOrder } from '../../lib/api';
+import { SwasthaAPI, formatApiError, type QueueEntry, type Prescription, type LabOrder } from '../../lib/api';
+import DashboardErrorBoundary from './DashboardErrorBoundary';
 import { UserPlus, Stethoscope, Pill, FlaskConical, Shield, ArrowRight, LayoutGrid, AlertTriangle } from 'lucide-react';
 import { alertDanger, card, pageHeader } from '../../lib/ui';
 
-export default function UnifiedDashboard() {
+function UnifiedDashboardContent() {
   const [queue, setQueue] = useState<QueueEntry[]>([]);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [labOrders, setLabOrders] = useState<LabOrder[]>([]);
@@ -13,7 +14,7 @@ export default function UnifiedDashboard() {
     Promise.all([SwasthaAPI.getQueue(), SwasthaAPI.getPrescriptions(), SwasthaAPI.getLabOrders()])
       .then(([q, p, l]) => { setQueue(q); setPrescriptions(p); setLabOrders(l); })
       .catch((err: any) => {
-        setError(err?.response?.data?.detail || err?.message || 'Failed to load dashboard counts.');
+        setError(formatApiError(err, 'Failed to load dashboard counts.'));
       });
   }, []);
 
@@ -123,5 +124,13 @@ export default function UnifiedDashboard() {
         ))}
       </div>
     </div>
+  );
+}
+
+export default function UnifiedDashboard() {
+  return (
+    <DashboardErrorBoundary label="Dashboard">
+      <UnifiedDashboardContent />
+    </DashboardErrorBoundary>
   );
 }
