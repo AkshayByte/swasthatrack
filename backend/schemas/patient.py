@@ -1,3 +1,4 @@
+import json
 import re
 from datetime import datetime
 
@@ -22,6 +23,16 @@ class PatientBase(BaseModel):
     def normalize_phone(cls, value):
         if isinstance(value, str):
             return re.sub(r"[\s\-()]", "", value)
+        return value
+
+    @field_validator("allergies", "medical_history", mode="before")
+    @classmethod
+    def parse_json_list(cls, value):
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except (json.JSONDecodeError, ValueError):
+                return []
         return value
 
 class PatientCreate(PatientBase):

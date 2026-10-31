@@ -153,3 +153,30 @@ def test_get_queue_default_limit_under_200(client: TestClient, admin_token: str,
     assert res.status_code == 200
     data = res.json()
     assert len(data) == 5
+
+
+def test_get_queue_parses_patient_json_fields(
+    client: TestClient, admin_token: str, db_session: Session, sample_patient: Patient
+):
+    sample_patient.allergies = "[]"
+    sample_patient.medical_history = "[]"
+    db_session.add(
+        QueueEntryModel(
+            patient_id=sample_patient.id,
+            queue_number="JSON-FIELDS-001",
+            service_type="General OPD",
+            status="waiting",
+            priority_score=50,
+        )
+    )
+    db_session.commit()
+
+    res = client.get(
+        "/api/queue/",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+
+    assert res.status_code == 200
+    patient = res.json()[0]["patient"]
+    assert patient["allergies"] == []
+    assert patient["medical_history"] == []
