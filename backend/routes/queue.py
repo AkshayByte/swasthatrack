@@ -16,8 +16,11 @@ from schemas.queue import (
     TriageResponse,
 )
 from utils.gemini_triage import analyze_clinical_triage
+from utils.triage_thresholds import clamp_score
 
 router = APIRouter()
+
+TRIAGE_PRIORITIES = {"low", "medium", "high", "emergency"}
 
 @router.post("/ai-triage", response_model=TriageResponse)
 async def perform_ai_triage(
@@ -57,6 +60,11 @@ def add_to_queue(
             entry.queue_number = candidate
 
         status_val = entry.status.value if hasattr(entry.status, "value") else entry.status
+        priority_score = (
+            clamp_score(entry.priority_score, entry.priority)
+            if entry.priority in TRIAGE_PRIORITIES
+            else entry.priority_score
+        )
         db_entry = QueueEntryModel(
             patient_id=entry.patient_id,
             queue_number=entry.queue_number,
@@ -64,7 +72,7 @@ def add_to_queue(
             doctor_id=entry.doctor_id,
             doctor_name=entry.doctor_name,
             priority=entry.priority,
-            priority_score=entry.priority_score,
+            priority_score=priority_score,
             status=status_val,
             estimated_wait_time=entry.estimated_wait_time,
             notes=entry.notes

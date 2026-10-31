@@ -9,6 +9,16 @@ class StatItem(BaseModel):
     change: int | None = 0
     trend: str | None = "neutral"
 
+class AdminDashboardStats(BaseModel):
+    total_patients: int
+    today_registrations: int
+    active_queue: int
+    pending_prescriptions: int
+    pending_lab_orders: int
+    low_stock_medicines: int
+    total_medicines: int
+    queue_by_department: list[dict[str, Any]]
+
 class MedicineStats(BaseModel):
     total_medicines: int
     low_stock_items: int

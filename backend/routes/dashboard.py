@@ -14,6 +14,7 @@ from models.queue import QueueEntry
 from models.user import User
 from routes.auth import get_current_user
 from schemas.dashboard import (
+    AdminDashboardStats,
     DoctorStats,
     LabStats,
     MedicineStats,
@@ -22,6 +23,60 @@ from schemas.dashboard import (
 )
 
 router = APIRouter()
+
+ACTIVE_QUEUE_STATUSES = ["waiting", "called", "in-progress"]
+
+
+@router.get("/", response_model=AdminDashboardStats)
+def get_admin_dashboard(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    today = datetime.now(timezone.utc).date()
+    start_of_day = datetime.combine(today, datetime.min.time()).replace(tzinfo=timezone.utc)
+
+    total_patients = db.query(func.count(Patient.id)).scalar()
+    today_registrations = db.query(func.count(Patient.id)).filter(
+        Patient.registration_date >= start_of_day
+    ).scalar()
+    active_queue = db.query(func.count(QueueEntry.id)).filter(
+        QueueEntry.status.in_(ACTIVE_QUEUE_STATUSES)
+    ).scalar()
+    pending_prescriptions = db.query(func.count(Prescription.id)).filter(
+        Prescription.status == "pending"
+    ).scalar()
+    pending_lab_orders = db.query(func.count(LabReport.id)).filter(
+        LabReport.status == "pending"
+    ).scalar()
+    total_medicines = db.query(func.count(Medicine.id)).scalar()
+    low_stock_medicines = db.query(func.count(Medicine.id)).filter(
+        Medicine.current_stock <= Medicine.minimum_stock
+    ).scalar()
+
+    queue_rows = (
+        db.query(QueueEntry.service_type, func.count(QueueEntry.id))
+        .filter(QueueEntry.status.in_(ACTIVE_QUEUE_STATUSES))
+        .group_by(QueueEntry.service_type)
+        .order_by(func.count(QueueEntry.id).desc())
+        .all()
+    )
+
+    return {
+        "total_patients": total_patients,
+        "today_registrations": today_registrations,
+        "active_queue": active_queue,
+        "pending_prescriptions": pending_prescriptions,
+        "pending_lab_orders": pending_lab_orders,
+        "low_stock_medicines": low_stock_medicines,
+        "total_medicines": total_medicines,
+        "queue_by_department": [
+            {"department": service_type, "count": count}
+            for service_type, count in queue_rows
+        ],
+    }
 
 @router.get("/medicine", response_model=MedicineStats)
 def get_medicine_dashboard(

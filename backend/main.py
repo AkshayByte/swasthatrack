@@ -31,7 +31,10 @@ async def lifespan(app: FastAPI):
     """Application lifespan handler — replaces deprecated on_event('startup')."""
     logger.info("Starting up SwasthaTrack API...")
     validate_secret_key()
-    create_tables()
+    if IS_PRODUCTION:
+        logger.info("Production mode: schema is managed by Alembic (run `alembic upgrade head`).")
+    else:
+        create_tables()
     try:
         from seed import seed
         seed_env = os.getenv("SEED_SAMPLE_DATA", "false").lower()

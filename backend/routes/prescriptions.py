@@ -91,12 +91,28 @@ def create_prescription(
 
     doctor_name = current_user.full_name or current_user.email
 
-    # Normalize medicines to JSON string for database storage
+    # Normalize medicines to a structured list, accepting both JSON arrays and
+    # legacy free-text values. The stored JSON is always an array of objects.
     if isinstance(data.medicines, str):
-        medicines_json = data.medicines
+        raw_medicines = data.medicines.strip()
+        try:
+            parsed_medicines = json.loads(raw_medicines)
+        except json.JSONDecodeError:
+            medicines_list = [{"name": raw_medicines}]
+        else:
+            if isinstance(parsed_medicines, list):
+                medicines_list = [
+                    item if isinstance(item, dict) else {"name": str(item)}
+                    for item in parsed_medicines
+                ]
+            elif isinstance(parsed_medicines, dict):
+                medicines_list = [parsed_medicines]
+            else:
+                medicines_list = [{"name": str(parsed_medicines)}]
     else:
         medicines_list = [m.model_dump() if hasattr(m, "model_dump") else m for m in data.medicines]
-        medicines_json = json.dumps(medicines_list)
+
+    medicines_json = json.dumps(medicines_list)
 
     valid_until = data.valid_until or (datetime.now(timezone.utc) + timedelta(days=30))
 
@@ -107,7 +123,9 @@ def create_prescription(
         prescribed_by=doctor_name,
         prescribed_at=datetime.now(timezone.utc),
         valid_until=valid_until,
-        status=data.status.value if hasattr(data.status, "value") else data.status,
+        # New prescriptions always start pending. Dispensing is a separate,
+        # stock-checked state transition handled by the pharmacist endpoint.
+        status=PrescriptionStatus.PENDING.value,
         notes=data.notes,
     )
     db.add(new_rx)
