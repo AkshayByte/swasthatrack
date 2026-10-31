@@ -1,50 +1,67 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { SwasthaAPI, type LabOrder } from '../../lib/api';
-import { FlaskConical, CheckCircle2, UploadCloud } from 'lucide-react';
+import { FlaskConical, CheckCircle2, AlertTriangle } from 'lucide-react';
 import {
   priorityBadge, statusBadge,
-  btnPrimary, btnSuccess,
+  btnSuccess,
   textareaMonoClass,
-  card, cardHeader, pageHeader, statPill, toast as toastCls,
+  card, cardHeader, pageHeader, statPill, toast as toastCls, alertDanger,
   listItem, listItemSelected, listItemEmergency,
 } from '../../lib/ui';
 
-const fallbackLabOrders: LabOrder[] = [
-  { id: 'LAB-701', patient_id: 1, patient_name: 'Rajesh Sharma', doctor_name: 'Dr. Vikram Sethi, MD', test_name: 'Cardiac Biomarkers (High-Sensitivity Troponin I & CK-MB)', category: 'Biochemistry', priority: 'stat', status: 'in_analysis', results: 'Troponin-I: 0.042 ng/mL (Mild Elevation, ref <0.014). CK-MB: 18 U/L (Normal).', created_at: new Date(Date.now() - 1000 * 60 * 25).toISOString() },
-  { id: 'LAB-702', patient_id: 2, patient_name: 'Anita Patel', doctor_name: 'Dr. Sunita Rao, MD', test_name: 'Glycated Hemoglobin (HbA1c) & Fasting Plasma Glucose', category: 'Biochemistry', priority: 'routine', status: 'sample_collected', results: '', created_at: new Date(Date.now() - 1000 * 60 * 45).toISOString() },
-  { id: 'LAB-703', patient_id: 3, patient_name: 'Mohan Lal Verma', doctor_name: 'Dr. Vikram Sethi, MD', test_name: 'Complete Blood Count (CBC) with Differential & ESR', category: 'Hematology', priority: 'urgent', status: 'pending', results: '', created_at: new Date(Date.now() - 1000 * 60 * 10).toISOString() },
-];
-
 export default function LabDashboard() {
-  const [labOrders, setLabOrders] = useState<LabOrder[]>(fallbackLabOrders);
-  const [selectedOrder, setSelectedOrder] = useState<LabOrder>(fallbackLabOrders[0]);
-  const [resultText, setResultText] = useState(fallbackLabOrders[0].results || '');
+  const [labOrders, setLabOrders] = useState<LabOrder[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<LabOrder | null>(null);
+  const [resultText, setResultText] = useState('');
   const [toast, setToast] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   const loadOrders = async () => {
     try {
       const data = await SwasthaAPI.getLabOrders();
-      if (data && data.length > 0) { setLabOrders(data); setSelectedOrder(data[0]); setResultText(data[0].results || ''); }
-    } catch {}
+      setLabOrders(data);
+      setSelectedOrder(prev => {
+        if (!prev) return data[0] || null;
+        return data.find(o => o.id === prev.id) || data[0] || null;
+      });
+      setError('');
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || err?.message || 'Failed to load lab orders.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { loadOrders(); }, []);
+  useEffect(() => {
+    loadOrders();
+
+    const interval = setInterval(() => {
+      if (!document.hidden) loadOrders();
+    }, 10000);
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) loadOrders();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   const handleUpdateStatus = async (id: string | number, nextStatus: LabOrder['status']) => {
-    try { await SwasthaAPI.updateLabOrderStatus(id, nextStatus, resultText || undefined); } catch {}
-    setLabOrders(prev => prev.map(o => o.id === id ? { ...o, status: nextStatus, results: resultText || o.results } : o));
-    if (selectedOrder?.id === id) setSelectedOrder(prev => ({ ...prev, status: nextStatus, results: resultText || prev.results }));
-    setToast(`Order #${id} updated to ${nextStatus.replace('_', ' ')}.`);
-    setTimeout(() => setToast(''), 4500);
-  };
-
-  const injectTemplate = (type: 'normal_cbc' | 'elevated_cardiac' | 'diabetic_panel') => {
-    const templates: Record<string, string> = {
-      normal_cbc: 'Hemoglobin: 14.8 g/dL (Normal: 13.5-17.5)\nWBC Count: 6,800 /mcL (Normal: 4,000-11,000)\nPlatelet Count: 240,000 /mcL (Normal: 150k-450k)\nESR (1st hr): 8 mm/hr (Normal < 15)',
-      elevated_cardiac: 'hs-Troponin I: 0.086 ng/mL [CRITICAL HIGH, ref <0.014]\nCK-MB Isoenzyme: 34 U/L [ELEVATED, ref <25]\nInterpretation: Findings suggestive of acute myocardial injury. Immediate cardiology review advised.',
-      diabetic_panel: 'HbA1c: 7.4% [ELEVATED, target <6.5%]\nEstimated Avg Glucose: 165 mg/dL\nFasting Blood Sugar: 146 mg/dL [ELEVATED, normal 70-99]',
-    };
-    setResultText(templates[type] || '');
+    setError('');
+    try {
+      await SwasthaAPI.updateLabOrderStatus(id, nextStatus, resultText || undefined);
+      setLabOrders(prev => prev.map(o => o.id === id ? { ...o, status: nextStatus, results: resultText || o.results } : o));
+      setSelectedOrder(prev => prev?.id === id ? { ...prev, status: nextStatus, results: resultText || prev.results } : prev);
+      setToast(`Order #${id} updated to ${nextStatus.replace('_', ' ')}.`);
+      setTimeout(() => setToast(''), 4500);
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || err?.message || `Failed to update order #${id}.`);
+    }
   };
 
   const pendingCount = labOrders.filter(o => o.status !== 'completed').length;
@@ -94,6 +111,14 @@ export default function LabDashboard() {
         </div>
       )}
 
+      {error && (
+        <div className={alertDanger}>
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span className="flex-1">{error}</span>
+          <button onClick={() => setError('')} className="text-xs font-semibold text-rose-700 dark:text-rose-300 hover:underline shrink-0">Dismiss</button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
 
         {/* ─── Left: Order Stream ─── */}
@@ -108,7 +133,14 @@ export default function LabDashboard() {
             </div>
 
             <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
-              {labOrders.map(order => {
+              {loading ? (
+                <div className="py-10 text-center text-xs text-slate-400">Loading orders…</div>
+              ) : labOrders.length === 0 ? (
+                <div className="py-10 text-center text-xs text-slate-400">
+                  <FlaskConical className="w-8 h-8 text-slate-200 dark:text-slate-700 mx-auto mb-2" />
+                  No diagnostic orders in the queue.
+                </div>
+              ) : labOrders.map(order => {
                 const isSelected = selectedOrder?.id === order.id;
                 const isStat = order.priority === 'stat';
                 return (
@@ -120,7 +152,7 @@ export default function LabDashboard() {
                       <div className="min-w-0 flex-1">
                         <div className="font-semibold text-sm text-slate-900 dark:text-white line-clamp-1">{order.test_name}</div>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                          Patient: <span className="font-medium text-slate-700 dark:text-slate-300">{order.patient_name}</span>
+                          Patient: <span className="font-medium text-slate-700 dark:text-slate-300">{order.patient_name || `#${order.patient_id}`}</span>
                         </p>
                         <p className="text-[11px] text-slate-400 font-mono mt-0.5">#{order.id} · {order.category}</p>
                       </div>
@@ -146,7 +178,7 @@ export default function LabDashboard() {
                   <div className="text-xs font-mono text-slate-400 mb-0.5">#{selectedOrder.id}</div>
                   <h2 className="font-bold text-lg text-slate-900 dark:text-white">{selectedOrder.test_name}</h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Patient: <span className="font-medium text-slate-700 dark:text-slate-300">{selectedOrder.patient_name}</span> · Dr. {selectedOrder.doctor_name}
+                    Patient: <span className="font-medium text-slate-700 dark:text-slate-300">{selectedOrder.patient_name || `#${selectedOrder.patient_id}`}</span> · {selectedOrder.doctor_name || 'Unassigned'}
                   </p>
                 </div>
                 <span className={statusBadge[selectedOrder.status] || statusBadge.pending}>
@@ -163,7 +195,7 @@ export default function LabDashboard() {
                     const isDone = currentIdx >= idx;
                     return (
                       <button key={step.key}
-                        onClick={() => handleUpdateStatus(selectedOrder.id, step.key as any)}
+                        onClick={() => handleUpdateStatus(selectedOrder.id, step.key as LabOrder['status'])}
                         className={`p-2.5 rounded-lg text-xs font-semibold text-center border transition-all cursor-pointer ${
                           isDone
                             ? 'bg-sky-600 text-white border-sky-600 shadow-sm'
@@ -182,29 +214,16 @@ export default function LabDashboard() {
                   <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">
                     Diagnostic Findings & Lab Results
                   </label>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-slate-400 font-medium">Templates:</span>
-                    {[
-                      { key: 'elevated_cardiac' as const, label: 'Troponin', color: 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800' },
-                      { key: 'normal_cbc' as const, label: 'CBC', color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800' },
-                      { key: 'diabetic_panel' as const, label: 'HbA1c', color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800' },
-                    ].map(t => (
-                      <button key={t.key} type="button" onClick={() => injectTemplate(t.key)}
-                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold border transition-colors hover:opacity-80 ${t.color}`}>
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
                 </div>
-                <textarea rows={5} value={resultText} onChange={e => setResultText(e.target.value)}
+                <textarea rows={6} value={resultText} onChange={e => setResultText(e.target.value)}
                   placeholder="Enter analyzer values, qualitative notes, or reference ranges..."
                   className={textareaMonoClass} />
               </div>
 
               {/* Actions */}
               <div className="flex items-center justify-between pt-1">
-                <div className="text-xs text-slate-400 flex items-center gap-1.5">
-                  <UploadCloud className="w-4 h-4" /> EMR record auto-sync
+                <div className="text-xs text-slate-400">
+                  Results are saved to this diagnostic order.
                 </div>
                 <button onClick={() => handleUpdateStatus(selectedOrder.id, 'completed')} className={btnSuccess}>
                   <CheckCircle2 className="w-3.5 h-3.5" /> Finalize & Publish Report

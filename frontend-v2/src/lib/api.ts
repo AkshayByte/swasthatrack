@@ -96,6 +96,48 @@ export interface LabOrder {
   report_file?: string;
 }
 
+export interface Medicine {
+  id: number;
+  name: string;
+  generic_name?: string;
+  category?: string;
+  current_stock: number;
+  minimum_stock: number;
+  maximum_stock?: number;
+  expiry_date?: string;
+  is_active?: boolean;
+}
+
+export interface DashboardSummary {
+  total_patients: number;
+  today_registrations: number;
+  active_queue: number;
+  pending_prescriptions: number;
+  pending_lab_orders: number;
+  low_stock_medicines: number;
+  total_medicines: number;
+  queue_by_department: { department: string; count: number }[];
+}
+
+export type TriageUrgency = 'low' | 'medium' | 'high' | 'emergency';
+
+export interface TriageResult {
+  urgency: TriageUrgency;
+  priorityScore: number;
+  recommendedDepartment: string;
+  estimatedWaitMinutes: number;
+  diagnosticIndicators: string[];
+  reasoning: string;
+  source: 'gemini' | 'heuristic_fallback';
+}
+
+export interface TriageVitals {
+  bp?: string;
+  temp?: string;
+  spo2?: string;
+  hr?: string;
+}
+
 
 export const SwasthaAPI = {
   // PATIENT ENDPOINTS
@@ -124,197 +166,77 @@ export const SwasthaAPI = {
     await apiClient.put(`/queue/${id}/status`, null, { params: { status } });
   },
 
+  // MEDICINES / INVENTORY
+  async getMedicines(limit = 500): Promise<Medicine[]> {
+    const res = await apiClient.get<Medicine[]>('/medicine/', { params: { limit } });
+    return Array.isArray(res.data) ? res.data : [];
+  },
+
+  // DASHBOARD
+  async getDashboardSummary(): Promise<DashboardSummary> {
+    const res = await apiClient.get<DashboardSummary>('/dashboard/');
+    return res.data;
+  },
+
   // PRESCRIPTIONS (Routing to Pharmacy)
   async getPrescriptions(): Promise<Prescription[]> {
-    try {
-      const res = await apiClient.get<Prescription[]>('/prescriptions/');
-      return Array.isArray(res.data) ? res.data : [];
-    } catch {
-      return [];
-    }
+    const res = await apiClient.get<Prescription[]>('/prescriptions/');
+    return Array.isArray(res.data) ? res.data : [];
   },
 
   async createPrescription(rx: Partial<Prescription>): Promise<Prescription> {
-    try {
-      const res = await apiClient.post<Prescription>('/prescriptions/', rx);
-      return res.data;
-    } catch {
-      // Prescription endpoint may not be implemented yet — return constructed object
-      return {
-        id: `RX-${Date.now().toString().slice(-4)}`,
-        patient_id: rx.patient_id || 0,
-        patient_name: rx.patient_name || 'Patient',
-        doctor_name: rx.doctor_name || 'Consulting Physician',
-        medicines: rx.medicines || [],
-        status: 'pending',
-        created_at: new Date().toISOString(),
-        notes: rx.notes
-      };
-    }
+    const res = await apiClient.post<Prescription>('/prescriptions/', rx);
+    return res.data;
   },
 
   async updatePrescriptionStatus(id: string | number, status: Prescription['status']): Promise<void> {
-    try {
-      await apiClient.put(`/prescriptions/${id}/status`, { status });
-    } catch {
-      // Endpoint may not exist yet
-    }
+    await apiClient.put(`/prescriptions/${id}/status`, { status });
   },
 
   // LAB ORDERS (Routing to Lab)
   async getLabOrders(): Promise<LabOrder[]> {
-    try {
-      const res = await apiClient.get<LabOrder[]>('/lab-orders/');
-      return Array.isArray(res.data) ? res.data : [];
-    } catch {
-      return [];
-    }
+    const res = await apiClient.get<LabOrder[]>('/lab-orders/');
+    return Array.isArray(res.data) ? res.data : [];
   },
 
   async createLabOrder(order: Partial<LabOrder>): Promise<LabOrder> {
-    try {
-      const res = await apiClient.post<LabOrder>('/lab-orders/', order);
-      return res.data;
-    } catch {
-      // Lab order endpoint may not be implemented yet — return constructed object
-      return {
-        id: `LAB-${Date.now().toString().slice(-4)}`,
-        patient_id: order.patient_id || 0,
-        patient_name: order.patient_name || 'Patient',
-        doctor_name: order.doctor_name || 'Consulting Physician',
-        test_name: order.test_name || 'Clinical Pathology Test',
-        category: order.category || 'Diagnostics',
-        priority: order.priority || 'routine',
-        status: 'pending',
-        created_at: new Date().toISOString()
-      };
-    }
+    const res = await apiClient.post<LabOrder>('/lab-orders/', order);
+    return res.data;
   },
 
   async updateLabOrderStatus(id: string | number, status: LabOrder['status'], results?: string): Promise<void> {
-    try {
-      await apiClient.put(`/lab-orders/${id}/status`, { status, results });
-    } catch {
-      // Endpoint may not exist yet
-    }
+    await apiClient.put(`/lab-orders/${id}/status`, { status, results });
   },
 
-  // AI TRIAGE LOGIC (Google Gemini API + FastAPI Pipeline with Resilient Fallback)
-  calculateAITriage(
-    symptoms: string, 
-    vitals?: { bp?: string; temp?: string; spo2?: string; hr?: string },
-    patientDetails?: { age?: number; gender?: string; medical_history?: string[]; allergies?: string[] }
-  ): {
-    urgency: 'low' | 'medium' | 'high' | 'emergency';
-    priorityScore: number;
-    recommendedDepartment: string;
-    estimatedWaitMinutes: number;
-    diagnosticIndicators: string[];
-    reasoning: string;
-    source: 'gemini' | 'heuristic_fallback';
-  } {
-    const lower = symptoms.toLowerCase();
-    const indicators: string[] = [];
-    
-    const tempNum = vitals?.temp ? parseFloat(vitals.temp) : undefined;
-    const spo2Num = vitals?.spo2 ? parseFloat(vitals.spo2) : undefined;
-    
-    if (spo2Num && spo2Num < 90) indicators.push(`Critical SpO2 desaturation (${spo2Num}%)`);
-    if (tempNum && tempNum >= 102.5) indicators.push(`Hyperpyrexia (${tempNum}°F)`);
-
-    // Emergency conditions
-    const emergencyKeywords = ['chest pain', 'unconscious', 'stroke', 'heavy bleeding', 'breathing difficulty', 'dyspnea'];
-    if (emergencyKeywords.some(k => lower.includes(k)) || (spo2Num && spo2Num < 90)) {
-      indicators.push('Acute cardiovascular / respiratory emergency trigger');
-      return {
-        urgency: 'emergency',
-        priorityScore: 95,
-        recommendedDepartment: 'Emergency & Resuscitation / Cardiology',
-        estimatedWaitMinutes: 0,
-        diagnosticIndicators: indicators.length ? indicators : ['High-acuity emergency trigger'],
-        reasoning: 'Critical symptoms detected. Immediate triage bypass to Resuscitation/Cardiology.',
-        source: 'heuristic_fallback'
-      };
-    }
-    
-    // High urgency
-    const highKeywords = ['fracture', 'high fever', 'asthma', 'severe abdominal', 'vomiting blood', 'seizure'];
-    if (highKeywords.some(k => lower.includes(k)) || (tempNum && tempNum > 102)) {
-      indicators.push('Potentially unstable acute condition');
-      return {
-        urgency: 'high',
-        priorityScore: 75,
-        recommendedDepartment: 'Urgent Care / Internal Medicine',
-        estimatedWaitMinutes: 10,
-        diagnosticIndicators: indicators.length ? indicators : ['Elevated urgency trigger'],
-        reasoning: 'High-acuity clinical markers detected requiring expedited medical consultation.',
-        source: 'heuristic_fallback'
-      };
-    }
-
-    // Medium urgency
-    const medKeywords = ['cough', 'vomiting', 'headache', 'sprain', 'infection', 'fever', 'throat'];
-    if (medKeywords.some(k => lower.includes(k))) {
-      indicators.push('Stable acute illness without compromise');
-      return {
-        urgency: 'medium',
-        priorityScore: 50,
-        recommendedDepartment: 'General Medicine OPD',
-        estimatedWaitMinutes: 25,
-        diagnosticIndicators: indicators,
-        reasoning: 'Moderate acute condition suitable for standard outpatient clinical examination.',
-        source: 'heuristic_fallback'
-      };
-    }
-
-    // Low urgency
-    return {
-      urgency: 'low',
-      priorityScore: 25,
-      recommendedDepartment: 'Routine Health Check / Preventive OPD',
-      estimatedWaitMinutes: 40,
-      diagnosticIndicators: ['Stable baseline'],
-      reasoning: 'Stable, non-urgent consultation; regular queue assigned.',
-      source: 'heuristic_fallback'
-    };
-  },
-
-  // Asynchronous FastAPI Gemini Triage API Client
-  async calculateAITriageAsync(
+  // AI TRIAGE (FastAPI + Gemini, with server-side heuristic fallback)
+  async calculateAITriage(
     symptoms: string,
-    vitals?: { bp?: string; temp?: string; spo2?: string; hr?: string },
+    vitals?: TriageVitals,
     patientDetails?: { age?: number; gender?: string; medical_history?: string[]; allergies?: string[] }
-  ) {
-    try {
-      const payload = {
-        symptoms,
-        vitals: vitals ? {
-          temperature_f: vitals.temp ? parseFloat(vitals.temp) : undefined,
-          heart_rate_bpm: vitals.hr ? parseInt(vitals.hr, 10) : undefined,
-          blood_pressure: vitals.bp || undefined,
-          spo2_percent: vitals.spo2 ? parseFloat(vitals.spo2) : undefined
-        } : undefined,
-        age: patientDetails?.age,
-        gender: patientDetails?.gender,
-        medical_history: patientDetails?.medical_history || [],
-        allergies: patientDetails?.allergies || []
-      };
+  ): Promise<TriageResult> {
+    const payload = {
+      symptoms,
+      vitals: vitals ? {
+        temperature_f: vitals.temp ? parseFloat(vitals.temp) : undefined,
+        heart_rate_bpm: vitals.hr ? parseInt(vitals.hr, 10) : undefined,
+        blood_pressure: vitals.bp || undefined,
+        spo2_percent: vitals.spo2 ? parseFloat(vitals.spo2) : undefined
+      } : undefined,
+      age: patientDetails?.age,
+      gender: patientDetails?.gender,
+      medical_history: patientDetails?.medical_history || [],
+      allergies: patientDetails?.allergies || []
+    };
 
-      const res = await apiClient.post('/queue/ai-triage', payload);
-      if (res.data && res.data.urgency) {
-        return {
-          urgency: res.data.urgency as 'low' | 'medium' | 'high' | 'emergency',
-          priorityScore: res.data.priority_score,
-          recommendedDepartment: res.data.recommended_department,
-          estimatedWaitMinutes: res.data.estimated_wait_minutes,
-          diagnosticIndicators: res.data.diagnostic_indicators || [],
-          reasoning: res.data.reasoning,
-          source: res.data.source as 'gemini' | 'heuristic_fallback'
-        };
-      }
-    } catch (e) {
-      console.warn('FastAPI AI Triage endpoint offline, fallback to client rules:', e);
-    }
-    return this.calculateAITriage(symptoms, vitals, patientDetails);
+    const res = await apiClient.post('/queue/ai-triage', payload);
+    return {
+      urgency: res.data.urgency as TriageUrgency,
+      priorityScore: res.data.priority_score,
+      recommendedDepartment: res.data.recommended_department,
+      estimatedWaitMinutes: res.data.estimated_wait_minutes,
+      diagnosticIndicators: res.data.diagnostic_indicators || [],
+      reasoning: res.data.reasoning,
+      source: res.data.source as TriageResult['source']
+    };
   }
 };
