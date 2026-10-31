@@ -1,4 +1,5 @@
 import json
+import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -29,8 +30,7 @@ def create_patient(
 
     # Generate registration number if not provided or empty
     if not patient.registration_number:
-        import time
-        patient.registration_number = f"REG{datetime.now().strftime('%Y%m%d')}{int(time.time())}"
+        patient.registration_number = f"REG{datetime.now().strftime('%Y%m%d')}{uuid.uuid4().hex[:8].upper()}"
 
     existing_reg = db.query(PatientModel).filter(PatientModel.registration_number == patient.registration_number).first()
     if existing_reg:

@@ -26,6 +26,7 @@ def test_create_patient_without_registration_number_generates_one(
     registration_number = response.json()["registration_number"]
     assert registration_number
     assert registration_number.startswith("REG")
+    assert len(registration_number) <= 20
 
 
 def test_create_patient_normalizes_phone(client: TestClient, admin_token: str, db_session: Session):
